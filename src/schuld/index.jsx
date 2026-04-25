@@ -46,8 +46,8 @@ const IconChevron = () => (
     <polyline points="6 9 12 15 18 9"/>
   </svg>
 );
-const FlagUK = () => (
-  <svg width="20" height="14" viewBox="0 0 60 40" style={{ borderRadius: 3, flexShrink: 0 }}>
+const FlagUK = ({ size = 24 }) => (
+  <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 60 40" style={{ borderRadius: 4, flexShrink: 0, display: "block" }}>
     <rect width="60" height="40" fill="#012169"/>
     <path d="M0,0 L60,40 M60,0 L0,40" stroke="white" strokeWidth="9"/>
     <path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="6"/>
@@ -55,8 +55,8 @@ const FlagUK = () => (
     <path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="9"/>
   </svg>
 );
-const FlagNL = () => (
-  <svg width="20" height="14" viewBox="0 0 60 40" style={{ borderRadius: 3, flexShrink: 0 }}>
+const FlagNL = ({ size = 24 }) => (
+  <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 60 40" style={{ borderRadius: 4, flexShrink: 0, display: "block" }}>
     <rect width="60" height="13.33" fill="#AE1C28"/>
     <rect y="13.33" width="60" height="13.34" fill="white"/>
     <rect y="26.67" width="60" height="13.33" fill="#21468B"/>
@@ -91,8 +91,8 @@ export default function SchuldOverzicht() {
     return () => document.removeEventListener("click", close);
   }, [showLangMenu]);
 
-  const LANGS = [{ code: "en", flag: <FlagUK />, label: "English" }, { code: "nl", flag: <FlagNL />, label: "Nederlands" }];
-  const currentLang = LANGS.find(l => l.code === lang);
+  const LANGS = [{ code: "en", Flag: FlagUK, label: "English" }, { code: "nl", Flag: FlagNL, label: "Nederlands" }];
+  const currentLang = LANGS.find(l => l.code === lang) || LANGS[0];
 
   const t = useCallback((key) => translations[lang]?.[key] || translations.en[key] || key, [lang]);
   const fmtDate = useCallback((d) => new Date(d).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }), [lang]);
@@ -186,7 +186,7 @@ export default function SchuldOverzicht() {
             <div className="doei-sidebar-lang">
               {LANGS.map(l => (
                 <button key={l.code} className={`doei-sidebar-lang-opt${lang === l.code ? " active" : ""}`} onClick={() => setLang(l.code)}>
-                  {l.flag}
+                  <l.Flag size={26} />
                 </button>
               ))}
             </div>
@@ -217,14 +217,14 @@ export default function SchuldOverzicht() {
               </button>
               <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
                 <button style={S.langDropBtn} onClick={() => setShowLangMenu(v => !v)}>
-                  {currentLang.flag}
+                  <currentLang.Flag size={22} />
                   <IconChevron />
                 </button>
                 {showLangMenu && (
                   <div style={S.langDropMenu}>
                     {LANGS.map((l, i) => (
                       <button key={l.code} style={{ ...S.langDropItem, ...(lang === l.code ? S.langDropItemActive : {}), ...(i === LANGS.length - 1 ? { borderBottom: "none" } : {}) }} onClick={() => { setLang(l.code); setShowLangMenu(false); }}>
-                        <span style={{ fontSize: 18 }}>{l.flag}</span>
+                        <l.Flag size={28} />
                         <span>{l.label}</span>
                       </button>
                     ))}
