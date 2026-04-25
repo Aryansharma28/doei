@@ -77,7 +77,7 @@ HOW TO RESPOND — THIS IS CRITICAL:
       const reply = data.reply || "Sorry, I couldn't process that. Please try again.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
       await span.end({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         systemPrompt,
         messages: apiMessages,
         output: reply,
@@ -85,7 +85,7 @@ HOW TO RESPOND — THIS IS CRITICAL:
       });
     } catch (err) {
       console.error("Advisor error:", err);
-      await span.end({ model: "claude-sonnet-4-20250514", messages: newMessages, output: null, error: err });
+      await span.end({ model: "claude-sonnet-4-6", messages: newMessages, output: null, error: err });
       setMessages(prev => [...prev, { role: "assistant", content: lang === "nl" ? "Er ging iets mis. Probeer het opnieuw." : "Something went wrong. Please try again." }]);
     }
     setLoading(false);

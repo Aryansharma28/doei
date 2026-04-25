@@ -9,7 +9,7 @@ export async function analyzeDocument(
   const tools = await mcp.listTools();
 
   const { text } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: anthropic("claude-sonnet-4-6"),
     system: `You are a document analyzer for Dutch debt-related documents. Extract key information and summarize in plain language. ${debtContext}`,
     messages: [
       {

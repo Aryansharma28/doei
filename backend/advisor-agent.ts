@@ -6,7 +6,7 @@ export async function runAdvisor(
   messages: CoreMessage[]
 ): Promise<string> {
   const { text } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: anthropic("claude-sonnet-4-6"),
     system: systemPrompt,
     messages,
   });
