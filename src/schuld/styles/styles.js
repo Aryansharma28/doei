@@ -1,4 +1,4 @@
-const serif = "'Fraunces', serif";
+const serif = "'Source Serif 4', Georgia, serif";
 
 export const S = {
   app: { maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", position: "relative" },
@@ -83,6 +83,28 @@ export const S = {
   mcBot: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   statusPill: { fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6 },
   mcAmt: { fontSize: 15, fontWeight: 700, fontFamily: serif },
+  typePill: { fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6 },
+  // Advisor chat
+  advisorWrap: { display: "flex", flexDirection: "column", height: "100%", minHeight: "calc(100vh - 110px)" },
+  advisorHeader: { display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid var(--border-color)" },
+  advisorAvatar: { width: 44, height: 44, borderRadius: 22, background: "linear-gradient(135deg, #3D405B, #2A2D42)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 },
+  advisorTitle: { fontSize: 17, fontWeight: 700, fontFamily: serif },
+  advisorSubtitle: { fontSize: 12, color: "var(--text-secondary)" },
+  chatArea: { flex: 1, overflowY: "auto", padding: "16px 16px 8px" },
+  welcomeMsg: { background: "var(--card-bg)", borderRadius: 16, padding: "16px 18px", fontSize: 14, lineHeight: 1.5, color: "var(--text-primary)", border: "1px solid var(--border-color)", marginBottom: 14 },
+  chipsWrap: { display: "flex", flexDirection: "column" },
+  chipsRow: { display: "flex", flexWrap: "wrap", gap: 8 },
+  chip: { background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: 20, padding: "8px 16px", fontSize: 13, fontWeight: 500, color: "#3D405B", cursor: "pointer" },
+  msgUser: { display: "flex", justifyContent: "flex-end", marginBottom: 12 },
+  msgBot: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12 },
+  msgBotAvatar: { width: 28, height: 28, borderRadius: 14, background: "#3D405B", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, marginTop: 2 },
+  msgBubbleUser: { background: "#3D405B", color: "white", borderRadius: "18px 18px 4px 18px", padding: "12px 16px", maxWidth: "80%", fontSize: 14, lineHeight: 1.5 },
+  msgBubbleBot: { background: "var(--card-bg)", border: "1px solid var(--border-color)", borderRadius: "18px 18px 18px 4px", padding: "12px 16px", maxWidth: "85%", fontSize: 14, lineHeight: 1.5, color: "var(--text-primary)" },
+  thinkingDots: { display: "flex", gap: 5, padding: "4px 0" },
+  dot: { width: 8, height: 8, borderRadius: 4, background: "#3D405B", animation: "dotPulse 1.4s ease-in-out infinite" },
+  chatInputWrap: { display: "flex", gap: 8, padding: "10px 16px 14px", borderTop: "1px solid var(--border-color)", background: "var(--bg)", flexShrink: 0 },
+  chatInput: { flex: 1, padding: "12px 16px", border: "1px solid var(--border-color)", borderRadius: 24, fontSize: 15, background: "var(--card-bg)", outline: "none" },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, background: "#3D405B", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   calLeg: { display: "flex", gap: 16, marginBottom: 14 },
   calLI: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-secondary)" },
   calDot: { width: 8, height: 8, borderRadius: 4, display: "inline-block" },

@@ -6,6 +6,10 @@ export const DEMO_DEBTS = [
   { id: "d5", creditorType: "gemeente", creditorName: "Gemeente Amsterdam", amount: 650, originalAmount: 650, dueDate: "2026-06-01", stage: "factuur", notes: "Gemeentebelasting 2026", createdAt: "2026-04-01" },
   { id: "d6", creditorType: "toeslagen", creditorName: "Belastingdienst/Toeslagen", amount: 1820, originalAmount: 1820, dueDate: "2026-05-25", stage: "herinnering", notes: "Zorgtoeslag terugvordering", createdAt: "2026-03-28" },
   { id: "d7", creditorType: "huur", creditorName: "Ymere", amount: 430, originalAmount: 430, dueDate: "2026-05-01", stage: "aanmaning", notes: "Huurachterstand maart", createdAt: "2026-04-05" },
+  { id: "d8", creditorType: "duo", creditorName: "DUO", amount: 16400, originalAmount: 16400, dueDate: "2026-07-01", stage: "factuur", notes: "Studieschuld terugbetaling", createdAt: "2024-09-01" },
+  { id: "d9", creditorType: "cak", creditorName: "CAK", amount: 320, originalAmount: 320, dueDate: "2026-05-15", stage: "herinnering", notes: "Eigen bijdrage Wmo 2025", createdAt: "2026-02-10" },
+  { id: "d10", creditorType: "klarna", creditorName: "Klarna", amount: 285, originalAmount: 245, dueDate: "2026-05-05", stage: "aanmaning", notes: "3x gespreide betaling webshop", createdAt: "2026-03-15" },
+  { id: "d11", creditorType: "bnpl", creditorName: "Riverty (Afterpay)", amount: 178, originalAmount: 178, dueDate: "2026-05-12", stage: "herinnering", notes: "Online bestelling januari", createdAt: "2026-01-28" },
 ];
 
 export const DEMO_MAIL = [
@@ -15,6 +19,10 @@ export const DEMO_MAIL = [
   { id: "m4", debtId: "d3", date: "2026-04-12", subject: "Betalingsherinnering eigen risico", creditorType: "zorg", status: "action", amount: 876 },
   { id: "m5", debtId: "d7", date: "2026-04-10", subject: "Aanmaning huurachterstand", creditorType: "huur", status: "done", amount: 430 },
   { id: "m6", debtId: "d6", date: "2026-04-08", subject: "Terugvordering zorgtoeslag", creditorType: "toeslagen", status: "action", amount: 1820 },
+  { id: "m7", debtId: "d8", date: "2026-04-05", subject: "Overzicht studieschuld 2026", creditorType: "duo", status: "done", amount: 16400 },
+  { id: "m8", debtId: "d9", date: "2026-04-02", subject: "Herinnering eigen bijdrage Wmo", creditorType: "cak", status: "action", amount: 320 },
+  { id: "m9", debtId: "d10", date: "2026-04-22", subject: "Aanmaning openstaand bedrag", creditorType: "klarna", status: "action", amount: 285 },
+  { id: "m10", debtId: "d11", date: "2026-04-14", subject: "Betalingsherinnering Riverty", creditorType: "bnpl", status: "action", amount: 178 },
 ];
 
 export const DEMO_INCOME = [

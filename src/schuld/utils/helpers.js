@@ -19,9 +19,10 @@ export const storage = {
 };
 
 export const globalCSS = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700&family=Instrument+Sans:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   :root { --bg: #FAFAF7; --card-bg: #FFFFFF; --text-primary: #1A1A2E; --text-secondary: #6B7280; --border-color: #E8E8E3; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); }
+  body { font-family: 'Instrument Sans', sans-serif; background: var(--bg); color: var(--text-primary); }
   input, select, button { font-family: inherit; }
+  @keyframes dotPulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
 `;
