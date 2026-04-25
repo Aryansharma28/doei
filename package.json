@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:backend": "node --import tsx/esm backend/server.ts",
+    "test:advisor": "vitest run backend/tests/advisor.test.ts",
     "build": "vite build",
     "preview": "vite preview",
     "eval:advisor": "node langwatch/evals/run-advisor-evals.js",
@@ -12,16 +14,28 @@
     "eval:all": "npm run eval:advisor && npm run eval:docs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
     "@anthropic-ai/sdk": "^0.52.0",
+    "@mastra/mcp": "^1.5.2",
     "@supabase/supabase-js": "^2.104.1",
+    "ai": "^6.0.168",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
+    "express": "^5.2.1",
     "langwatch": "^0.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
+    "@langwatch/scenario": "^0.4.11",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@vercel/node": "^5.7.13",
     "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.0.8"
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vite": "^5.0.8",
+    "vitest": "^4.1.5"
   }
 }

@@ -68,25 +68,20 @@ HOW TO RESPOND — THIS IS CRITICAL:
     try {
       const systemPrompt = buildSystemPrompt();
       const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/advisor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: apiMessages,
-        })
+        body: JSON.stringify({ systemPrompt, messages: apiMessages }),
       });
       const data = await response.json();
-      const reply = data.content?.map(i => i.text || "").join("") || "Sorry, I couldn't process that. Please try again.";
+      const reply = data.reply || "Sorry, I couldn't process that. Please try again.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
       await span.end({
         model: "claude-sonnet-4-20250514",
         systemPrompt,
         messages: apiMessages,
         output: reply,
-        usage: data.usage ?? {},
+        usage: {},
       });
     } catch (err) {
       console.error("Advisor error:", err);
