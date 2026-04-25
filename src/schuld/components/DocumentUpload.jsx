@@ -19,6 +19,17 @@ export function DocumentUpload({ debtId }) {
     if (data) setDocs(data);
   }
 
+  async function handleDownload(doc) {
+    const res = await fetch(doc.file_url);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = doc.file_name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -53,12 +64,12 @@ export function DocumentUpload({ debtId }) {
       {docs.length > 0 && (
         <div style={{ marginTop: 12 }}>
           {docs.map(doc => (
-            <a key={doc.id} href={doc.file_url} target="_blank" rel="noreferrer"
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--border-color)", textDecoration: "none", color: "var(--text-primary)" }}>
+            <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--border-color)" }}>
               <span style={{ fontSize: 20 }}>{doc.file_type?.startsWith("image") ? "🖼️" : "📄"}</span>
-              <span style={{ fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.file_name}</span>
-              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>↗</span>
-            </a>
+              <span style={{ fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-primary)" }}>{doc.file_name}</span>
+              <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--text-secondary)", textDecoration: "none", padding: "4px 8px" }}>↗</a>
+              <button onClick={() => handleDownload(doc)} style={{ fontSize: 11, background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px 8px" }}>⬇</button>
+            </div>
           ))}
         </div>
       )}
