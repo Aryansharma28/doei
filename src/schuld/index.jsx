@@ -4,6 +4,7 @@ import { Dashboard } from "./components/Dashboard";
 import { DebtDetail } from "./components/DebtDetail";
 import { Advisor } from "./components/Advisor";
 import { Alerts } from "./components/Alerts";
+import { Account } from "./components/Account";
 import { AddDebtModal } from "./components/AddDebtModal";
 import { S } from "./styles/styles";
 import { globalCSS, storage, fmt } from "./utils/helpers";
@@ -41,6 +42,12 @@ const IconMoon = () => (
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
   </svg>
 );
+const IconUser = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
 const IconChevron = () => (
   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9"/>
@@ -75,6 +82,8 @@ export default function SchuldOverzicht() {
   const [loaded, setLoaded] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("doei-theme") || "light");
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
+  const [connections, setConnections] = useState({});
   const scanRef = useRef();
 
   useLayoutEffect(() => {
@@ -104,12 +113,14 @@ export default function SchuldOverzicht() {
         if (saved.debts) setDebts(saved.debts);
         if (saved.income) setIncome(saved.income);
         if (saved.lang) setLang(saved.lang);
+        if (saved.profile) setProfile(saved.profile);
+        if (saved.connections) setConnections(saved.connections);
       }
       setLoaded(true);
     })();
   }, []);
 
-  useEffect(() => { if (loaded) storage.set("app-data-v4", { debts, income, lang }); }, [debts, income, lang, loaded]);
+  useEffect(() => { if (loaded) storage.set("app-data-v4", { debts, income, lang, profile, connections }); }, [debts, income, lang, profile, connections, loaded]);
 
   useEffect(() => {
     const today = new Date();
@@ -137,6 +148,8 @@ export default function SchuldOverzicht() {
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); setScanInitData(null); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
+  const connectIntegration = (id, data) => setConnections(prev => ({ ...prev, [id]: data }));
+  const disconnectIntegration = (id) => setConnections(prev => { const n = { ...prev }; delete n[id]; return n; });
 
   const handleScan = async (e) => {
     const file = e.target.files?.[0];
@@ -154,6 +167,7 @@ export default function SchuldOverzicht() {
     { id: "dashboard", icon: <IconHome />,    lk: "overview" },
     { id: "upload",    icon: <IconCamera />,  lk: "scan",    action: () => scanRef.current?.click() },
     { id: "calendar",  icon: <IconMessage />, lk: "advisor"  },
+    { id: "account",   icon: <IconUser />,    lk: "account"  },
   ];
 
   return (
@@ -238,9 +252,10 @@ export default function SchuldOverzicht() {
         {/* ── Main content ── */}
         <main style={S.main} className="doei-main">
           {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
-          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
+          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
+          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} />}
         </main>
 
         <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />
