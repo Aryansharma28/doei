@@ -1,7 +1,18 @@
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=kvsbclenpxdsldieyege"
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=kvsbclenpxdsldieyege",
+      "headers": {
+        "Authorization": "Bearer sbp_8002b480a3ca5728db9562d82de5da6053caa4ac"
+      }
+    },
+    "langwatch": {
+      "command": "npx",
+      "args": ["-y", "@langwatch/mcp-server"],
+      "env": {
+        "LANGWATCH_API_KEY": "sk-lw-1Hcf6sIxDggkUML30Jelc0c9yZA1JbBwCwYgl3kS8vVdNzBf"
+      }
     }
   }
 }

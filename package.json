@@ -6,9 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "eval:advisor": "node langwatch/evals/run-advisor-evals.js",
+    "eval:docs": "node langwatch/evals/run-document-analysis-evals.js",
+    "eval:all": "npm run eval:advisor && npm run eval:docs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@supabase/supabase-js": "^2.104.1",
+    "dotenv": "^16.4.5",
+    "langwatch": "^0.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.14.2"

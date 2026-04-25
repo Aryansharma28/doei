@@ -77,11 +77,50 @@ export default function SchuldOverzicht() {
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setMail(prev => prev.filter(m => m.debtId !== id)); setSelectedDebt(null); };
 
+  const tabs = [
+    { id: "dashboard", icon: "◉", lk: "overview" },
+    { id: "debts",     icon: "☰", lk: "debts"    },
+    { id: "mail",      icon: "✉", lk: "mail"      },
+    { id: "calendar",  icon: "💬", lk: "advisor"  },
+  ];
+
   return (
     <LangContext.Provider value={{ lang, t, fmtDate }}>
-      <div style={S.app}>
+      <div style={S.app} className="doei-app">
         <style>{globalCSS}</style>
-        <header style={S.header}>
+
+        {/* ── Desktop sidebar ── */}
+        <aside className="doei-sidebar">
+          <div className="doei-sidebar-logo">
+            <span className="doei-sidebar-logo-icon">◉</span>
+            <span className="doei-sidebar-logo-text">Doei Debt</span>
+          </div>
+          <nav className="doei-sidebar-nav">
+            {tabs.map(tab => (
+              <button key={tab.id} className={`doei-sidebar-btn${screen === tab.id ? " active" : ""}`} onClick={() => setScreen(tab.id)}>
+                <span className="doei-sidebar-icon">{tab.icon}</span>
+                {t(tab.lk)}
+              </button>
+            ))}
+            {notifications.length > 0 && (
+              <button className="doei-sidebar-notif" onClick={() => setScreen("alerts")}>
+                <span>🔔</span> {notifications.length} alert{notifications.length !== 1 ? "s" : ""}
+              </button>
+            )}
+          </nav>
+          <div className="doei-sidebar-bottom">
+            <button className="doei-sidebar-add" onClick={() => setShowAddDebt(true)}>
+              + {t("addDebt")}
+            </button>
+            <button className="doei-sidebar-lang" onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
+              <span className={`doei-sidebar-lang-opt${lang === "en" ? " active" : ""}`}>EN</span>
+              <span className={`doei-sidebar-lang-opt${lang === "nl" ? " active" : ""}`}>NL</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* ── Mobile header ── */}
+        <header style={S.header} className="doei-header">
           <div style={S.headerInner}>
             <div style={S.logo}><span style={S.logoIcon}>◉</span><span style={S.logoText}>Doei Debt</span></div>
             <div style={S.headerRight}>
@@ -97,7 +136,9 @@ export default function SchuldOverzicht() {
             </div>
           </div>
         </header>
-        <main style={S.main}>
+
+        {/* ── Main content ── */}
+        <main style={S.main} className="doei-main">
           {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} projected3={projected3} projected6={projected6} projected12={projected12} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
           {screen === "debts" && <DebtList debts={debts} onSelect={(d) => { setSelectedDebt(d); setScreen("detail"); }} onAdd={() => setShowAddDebt(true)} />}
           {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} mail={mail.filter(m => m.debtId === selectedDebt.id)} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
@@ -105,10 +146,11 @@ export default function SchuldOverzicht() {
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
         </main>
+
         {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => setShowAddDebt(false)} />}
-        <button style={S.fab} onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
-        <nav style={S.nav}>
-          {[{ id: "dashboard", icon: "◉", lk: "overview" }, { id: "debts", icon: "☰", lk: "debts" }, { id: "mail", icon: "✉", lk: "mail" }, { id: "calendar", icon: "💬", lk: "advisor" }].map(tab => (
+        <button style={S.fab} className="doei-fab" onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
+        <nav style={S.nav} className="doei-nav">
+          {tabs.map(tab => (
             <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => setScreen(tab.id)}>
               <span style={{ fontSize: 20 }}>{tab.icon}</span><span style={S.navLabel}>{t(tab.lk)}</span>
             </button>
