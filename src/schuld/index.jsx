@@ -119,7 +119,7 @@ export default function SchuldOverzicht() {
                 <ellipse cx="22" cy="22" rx="18" ry="28" transform="rotate(-45 22 22)" fill="#C49090"/>
               </g>
             </svg>
-            <span className="doei-sidebar-logo-text">doei debt</span>
+            <span className="doei-sidebar-logo-text">doei</span>
           </div>
           <nav className="doei-sidebar-nav">
             {tabs.map(tab => (
@@ -153,7 +153,7 @@ export default function SchuldOverzicht() {
                   <ellipse cx="22" cy="22" rx="18" ry="28" transform="rotate(-45 22 22)" fill="#C49090"/>
                 </g>
               </svg>
-              <span style={S.logoText}>doei debt</span>
+              <span style={S.logoText}>doei</span>
             </div>
             <div style={S.headerRight}>
               <button style={S.langToggle} onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
