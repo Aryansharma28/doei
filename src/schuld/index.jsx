@@ -151,9 +151,6 @@ export default function SchuldOverzicht() {
             ))}
           </nav>
           <div className="doei-sidebar-bottom">
-            <button className="doei-sidebar-add" onClick={() => { setScanInitData(null); setShowAddDebt(true); }}>
-              + {t("addDebt")}
-            </button>
             <button className="doei-sidebar-lang" onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
               <span className={`doei-sidebar-lang-opt${lang === "en" ? " active" : ""}`}>EN</span>
               <span className={`doei-sidebar-lang-opt${lang === "nl" ? " active" : ""}`}>NL</span>
