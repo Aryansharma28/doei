@@ -13,7 +13,7 @@ export function Dashboard({ debts, totalDebt, escalationCost, projected3, projec
   const byStage = {}; debts.forEach(d => { if (!byStage[d.stage]) byStage[d.stage] = { count: 0, amount: 0 }; byStage[d.stage].count++; byStage[d.stage].amount += d.amount; });
 
   return (
-    <div style={S.sc}>
+    <div style={S.sc} className="doei-sc screen-in">
       <div style={S.heroCard}>
         <div style={S.heroLabel}>{t("totalDebt")}</div>
         <div style={S.heroAmount}>{fmt(totalDebt)}</div>

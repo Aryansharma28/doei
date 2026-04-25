@@ -3,6 +3,7 @@ import { S } from "../styles/styles";
 import { useLang } from "../hooks/useLang";
 import { getCreditor, getStageData } from "../constants/creditors";
 import { fmt } from "../utils/helpers";
+import { createTrace } from "../../lib/langwatch";
 
 export function Advisor({ debts, income }) {
   const { t, lang } = useLang();
@@ -57,7 +58,15 @@ HOW TO RESPOND — THIS IS CRITICAL:
     setInput("");
     setLoading(true);
 
+    const totalDebt = debts.reduce((s, d) => s + d.amount, 0);
+    const trace = createTrace({
+      feature: "advisor",
+      metadata: { lang, debt_count: debts.length, total_debt_eur: Math.round(totalDebt) },
+    });
+    const span = trace.startLLMSpan("debt-advisor");
+
     try {
+      const systemPrompt = buildSystemPrompt();
       const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -65,15 +74,23 @@ HOW TO RESPOND — THIS IS CRITICAL:
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          system: buildSystemPrompt(),
+          system: systemPrompt,
           messages: apiMessages,
         })
       });
       const data = await response.json();
       const reply = data.content?.map(i => i.text || "").join("") || "Sorry, I couldn't process that. Please try again.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      await span.end({
+        model: "claude-sonnet-4-20250514",
+        systemPrompt,
+        messages: apiMessages,
+        output: reply,
+        usage: data.usage ?? {},
+      });
     } catch (err) {
       console.error("Advisor error:", err);
+      await span.end({ model: "claude-sonnet-4-20250514", messages: newMessages, output: null, error: err });
       setMessages(prev => [...prev, { role: "assistant", content: lang === "nl" ? "Er ging iets mis. Probeer het opnieuw." : "Something went wrong. Please try again." }]);
     }
     setLoading(false);
@@ -82,7 +99,7 @@ HOW TO RESPOND — THIS IS CRITICAL:
   const chips = [t("chip1"), t("chip2"), t("chip3"), t("chip4")];
 
   return (
-    <div style={S.advisorWrap}>
+    <div style={S.advisorWrap} className="doei-advisor-wrap screen-in">
       <div style={S.advisorHeader}>
         <div style={S.advisorAvatar}>◉</div>
         <div>

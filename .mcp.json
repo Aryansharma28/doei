@@ -1,7 +1,18 @@
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF"
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF",
+      "headers": {
+        "Authorization": "Bearer REDACTED_SUPABASE_PAT"
+      }
+    },
+    "langwatch": {
+      "command": "npx",
+      "args": ["-y", "@langwatch/mcp-server"],
+      "env": {
+        "LANGWATCH_API_KEY": "REDACTED_LANGWATCH_KEY"
+      }
     }
   }
 }
