@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { LangContext } from "./context/LangContext";
 import { Dashboard } from "./components/Dashboard";
 import { DebtDetail } from "./components/DebtDetail";
@@ -27,6 +27,20 @@ const IconMessage = () => (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
   </svg>
 );
+const IconSun = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </svg>
+);
+const IconMoon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
 
 export default function SchuldOverzicht() {
   const [lang, setLang] = useState("en");
@@ -38,7 +52,15 @@ export default function SchuldOverzicht() {
   const [scanInitData, setScanInitData] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("doei-theme") || "light");
   const scanRef = useRef();
+
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("doei-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === "light" ? "dark" : "light");
 
   const t = useCallback((key) => translations[lang]?.[key] || translations.en[key] || key, [lang]);
   const fmtDate = useCallback((d) => new Date(d).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }), [lang]);
@@ -111,7 +133,6 @@ export default function SchuldOverzicht() {
         <aside className="doei-sidebar">
           <div className="doei-sidebar-logo">
             <svg width="30" height="30" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-              <circle cx="60" cy="60" r="58" fill="#1A1A2E"/>
               <g transform="translate(60,60) scale(0.52)">
                 <ellipse cx="-22" cy="-22" rx="18" ry="28" transform="rotate(-45 -22 -22)" fill="#5CC8C8"/>
                 <ellipse cx="22" cy="-22" rx="18" ry="28" transform="rotate(45 22 -22)" fill="#F0C246"/>
@@ -137,6 +158,10 @@ export default function SchuldOverzicht() {
               <span className={`doei-sidebar-lang-opt${lang === "en" ? " active" : ""}`}>EN</span>
               <span className={`doei-sidebar-lang-opt${lang === "nl" ? " active" : ""}`}>NL</span>
             </button>
+            <button className="doei-sidebar-theme" onClick={toggleTheme}>
+              <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>
+              {theme === "light" ? <IconMoon /> : <IconSun />}
+            </button>
           </div>
         </aside>
 
@@ -145,7 +170,6 @@ export default function SchuldOverzicht() {
           <div style={S.headerInner}>
             <div style={S.logo}>
               <svg width="30" height="30" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-                <circle cx="60" cy="60" r="58" fill="#1A1A2E"/>
                 <g transform="translate(60,60) scale(0.52)">
                   <ellipse cx="-22" cy="-22" rx="18" ry="28" transform="rotate(-45 -22 -22)" fill="#5CC8C8"/>
                   <ellipse cx="22" cy="-22" rx="18" ry="28" transform="rotate(45 22 -22)" fill="#F0C246"/>
@@ -156,6 +180,9 @@ export default function SchuldOverzicht() {
               <span style={S.logoText}>doei</span>
             </div>
             <div style={S.headerRight}>
+              <button style={S.themeBtn} onClick={toggleTheme}>
+                {theme === "light" ? <IconMoon /> : <IconSun />}
+              </button>
               <button style={S.langToggle} onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
                 <span style={{ ...S.langOpt, ...(lang === "en" ? S.langActive : {}) }}>EN</span>
                 <span style={{ ...S.langOpt, ...(lang === "nl" ? S.langActive : {}) }}>NL</span>
