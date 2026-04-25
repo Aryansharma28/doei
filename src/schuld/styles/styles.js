@@ -1,7 +1,7 @@
 const serif = "'Source Serif 4', Georgia, serif";
 
 export const S = {
-  app: { maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: "transparent", display: "flex", flexDirection: "column", position: "relative", overflowX: "hidden" },
+  app: { width: "100%", minHeight: "100vh", background: "transparent", display: "flex", flexDirection: "column", position: "relative", overflowX: "hidden" },
   header: { position: "sticky", top: 0, zIndex: 100, background: "var(--header-bg)", backdropFilter: "blur(20px) saturate(1.6)", WebkitBackdropFilter: "blur(20px) saturate(1.6)", borderBottom: "1px solid var(--border-color)" },
   headerInner: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" },
   logo: { display: "flex", alignItems: "center", gap: 8 },
@@ -11,11 +11,11 @@ export const S = {
   langToggle: { display: "flex", background: "var(--lang-toggle-bg)", borderRadius: 8, padding: 2, border: "none", cursor: "pointer", gap: 0 },
   langOpt: { padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", transition: "all 0.2s", letterSpacing: 0.5 },
   langActive: { background: "var(--lang-active-bg)", color: "var(--lang-active-color)" },
-  langDropBtn: { display: "flex", alignItems: "center", gap: 4, background: "var(--lang-toggle-bg)", border: "none", borderRadius: 8, padding: "5px 8px", cursor: "pointer", color: "var(--text-secondary)" },
+  langDropBtn: { display: "flex", alignItems: "center", gap: 4, background: "var(--lang-toggle-bg)", border: "none", borderRadius: 8, padding: "0 10px", height: 36, cursor: "pointer", color: "var(--text-secondary)", flexShrink: 0 },
   langDropMenu: { position: "absolute", top: "calc(100% + 6px)", right: 0, background: "var(--modal-bg)", backdropFilter: "blur(24px) saturate(1.6)", WebkitBackdropFilter: "blur(24px) saturate(1.6)", border: "1px solid var(--card-border)", borderRadius: 12, overflow: "hidden", zIndex: 300, minWidth: 140, boxShadow: "var(--card-shadow)" },
   langDropItem: { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid var(--border-color)", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "var(--text-primary)", textAlign: "left" },
   langDropItemActive: { background: "var(--tag-bg)", fontWeight: 600 },
-  themeBtn: { background: "var(--lang-toggle-bg)", border: "none", borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-secondary)", flexShrink: 0, transition: "background 0.2s" },
+  themeBtn: { background: "var(--lang-toggle-bg)", border: "none", borderRadius: 8, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-secondary)", flexShrink: 0, transition: "background 0.2s" },
   notifBadge: { background: "none", border: "none", fontSize: 22, position: "relative", cursor: "pointer", padding: 4 },
   notifCount: { position: "absolute", top: -2, right: -4, background: "#E07A5F", color: "white", fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "1px 6px", minWidth: 18, textAlign: "center" },
   main: { flex: 1, paddingBottom: 90 },
