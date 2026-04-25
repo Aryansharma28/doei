@@ -136,6 +136,28 @@ const fmt = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency:
 const getCreditor = (id) => CREDITOR_TYPES.find(c => c.id === id) || CREDITOR_TYPES[12];
 const getStageData = (id) => STAGE_KEYS.find(s => s.id === id) || STAGE_KEYS[0];
 
+// Dutch legal stages from document analysis → our stage IDs
+const LEGAL_STAGE_MAP = { factuur: "stable", herinnering: "stable", aanmaning: "warning", incasso: "action_needed", deurwaarder: "action_needed" };
+const HIGH_STAKES = ["belasting", "cjib", "toeslagen", "incasso", "huur"];
+
+function computeStage(debt) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const daysUntilDue = Math.ceil((new Date(debt.dueDate) - today) / 864e5);
+  const hasEscalation = debt.amount > debt.originalAmount;
+  const isHighStakes = HIGH_STAKES.includes(debt.creditorType);
+
+  // Document-detected legal stage takes precedence when it signals urgency
+  if (debt.legalStage && LEGAL_STAGE_MAP[debt.legalStage]) {
+    const fromDoc = LEGAL_STAGE_MAP[debt.legalStage];
+    if (fromDoc === "action_needed") return "action_needed";
+    if (fromDoc === "warning" && daysUntilDue > 7) return "warning";
+  }
+
+  if (daysUntilDue <= 7) return "action_needed";
+  if (daysUntilDue <= 30 || hasEscalation || isHighStakes) return "warning";
+  return "stable";
+}
+
 const IconHome = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
@@ -191,9 +213,9 @@ export default function SchuldOverzicht() {
         const timeStr = diff === 0 ? t("dueToday") : (diff > 1 ? t("dueInPlural").replace("{n}", diff) : t("dueIn").replace("{n}", diff));
         notifs.push({ type: "urgent", text: `${credLabel}: ${fmt(d.amount)} ${t("expires")} ${timeStr}`, debtId: d.id });
       }
-      if (d.stage === "action_needed") {
+      if (computeStage(d) === "action_needed") {
         const credLabel = t(getCreditor(d.creditorType).labelKey);
-        const stageLabel = t(getStageData(d.stage).labelKey);
+        const stageLabel = t(getStageData(computeStage(d)).labelKey);
         notifs.push({ type: "escalation", text: `${credLabel} ${t("inPhase").replace("{stage}", stageLabel)}`, debtId: d.id });
       }
     });
@@ -257,8 +279,8 @@ export default function SchuldOverzicht() {
 function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notifications, onViewDebt, onNavigate }) {
   const { t, fmtDate } = useLang();
   const stagePriority = { action_needed: 0, warning: 1, stable: 2 };
-  const sortedDebts = [...debts].sort((a, b) => (stagePriority[a.stage] ?? 3) - (stagePriority[b.stage] ?? 3) || b.amount - a.amount);
-  const byStage = {}; debts.forEach(d => { const sid = getStageData(d.stage).id; byStage[sid] = (byStage[sid] || 0) + 1; });
+  const sortedDebts = [...debts].sort((a, b) => (stagePriority[computeStage(a)] ?? 3) - (stagePriority[computeStage(b)] ?? 3) || b.amount - a.amount);
+  const byStage = {}; debts.forEach(d => { const sid = computeStage(d); byStage[sid] = (byStage[sid] || 0) + 1; });
 
   return (
     <div style={S.sc}>
@@ -284,7 +306,7 @@ function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notificati
           ))}
         </div>
       </div>
-      {sortedDebts.map(d => { const c = getCreditor(d.creditorType); const s = getStageData(d.stage); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return (
+      {sortedDebts.map(d => { const c = getCreditor(d.creditorType); const s = getStageData(computeStage(d)); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return (
         <button key={d.id} style={S.debtCard} onClick={() => onViewDebt(d)}>
           <div style={S.dcLeft}><span style={{ fontSize: 28 }}>{c.icon}</span></div>
           <div style={S.dcCenter}><div style={S.dcName}>{d.creditorName}</div><div style={S.dcNotes}>{d.notes}</div><div style={S.dcMeta}><span style={{ ...S.stagePill, backgroundColor: s.color + "22", color: s.color }}>{t(s.labelKey)}</span><span style={S.dcDue}>{diff <= 0 ? t("expired") : fmtDate(d.dueDate)}</span></div></div>
@@ -303,7 +325,7 @@ function DebtList({ debts, onSelect, onAdd }) {
   return (
     <div style={S.sc}>
       <div style={S.screenHeader}><h2 style={S.screenTitle}>{t("allDebts")}</h2><button style={S.addBtn} onClick={onAdd}>{t("add")}</button></div>
-      {sorted.map(d => { const c = getCreditor(d.creditorType); const s = getStageData(d.stage); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return (
+      {sorted.map(d => { const c = getCreditor(d.creditorType); const s = getStageData(computeStage(d)); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return (
         <button key={d.id} style={S.debtCard} onClick={() => onSelect(d)}>
           <div style={S.dcLeft}><span style={{ fontSize: 28 }}>{c.icon}</span></div>
           <div style={S.dcCenter}><div style={S.dcName}>{d.creditorName}</div><div style={S.dcNotes}>{d.notes}</div><div style={S.dcMeta}><span style={{ ...S.stagePill, backgroundColor: s.color + "22", color: s.color }}>{t(s.labelKey)}</span><span style={S.dcDue}>{diff <= 0 ? t("expired") : fmtDate(d.dueDate)}</span></div></div>
@@ -317,7 +339,7 @@ function DebtList({ debts, onSelect, onAdd }) {
 // ─── Detail ───
 function DebtDetail({ debt, onBack, onDelete }) {
   const { t, fmtDate } = useLang();
-  const c = getCreditor(debt.creditorType); const s = getStageData(debt.stage); const ci = debt.amount - debt.originalAmount;
+  const c = getCreditor(debt.creditorType); const s = getStageData(computeStage(debt)); const ci = debt.amount - debt.originalAmount;
   return (
     <div style={S.sc}>
       <button style={S.backBtn} onClick={onBack}>{t("back")}</button>
@@ -377,7 +399,7 @@ function AddDebtModal({ onAdd, onClose }) {
   const [amount, setAmount] = useState("");
   const [originalAmount, setOriginalAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [stage, setStage] = useState("stable");
+  const [legalStage, setLegalStage] = useState("");
   const [notes, setNotes] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const fileRef = useRef();
@@ -391,12 +413,12 @@ function AddDebtModal({ onAdd, onClose }) {
         model: "claude-sonnet-4-20250514", max_tokens: 1000,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: file.type || "image/jpeg", data: b64 } },
-          { type: "text", text: `Analyze this letter/invoice. Return ONLY a JSON object (no markdown, no backticks): creditorType (one of: belasting, cjib, zorg, gemeente, energie, huur, telecom, incasso, bank, bnpl, toeslagen, water, overig), creditorName, amount (number), dueDate (YYYY-MM-DD), stage (one of: factuur, herinnering, aanmaning, incasso, deurwaarder), notes. Use empty string or 0 if not found.` }
+          { type: "text", text: `Analyze this letter/invoice. Return ONLY a JSON object (no markdown, no backticks): creditorType (one of: belasting, cjib, zorg, gemeente, energie, huur, telecom, incasso, bank, bnpl, toeslagen, water, overig), creditorName, amount (number), dueDate (YYYY-MM-DD), legalStage (one of: factuur, herinnering, aanmaning, incasso, deurwaarder — the Dutch legal escalation stage of this letter), notes. Use empty string or 0 if not found.` }
         ] }]
       }) });
       const data = await resp.json(); const text = data.content?.map(i => i.text || "").join("") || "";
       const p = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setCreditorType(p.creditorType || ""); setCreditorName(p.creditorName || ""); setAmount(p.amount ? String(p.amount) : ""); setOriginalAmount(p.amount ? String(p.amount) : ""); setDueDate(p.dueDate || ""); setStage(p.stage || "stable"); setNotes(p.notes || "");
+      setCreditorType(p.creditorType || ""); setCreditorName(p.creditorName || ""); setAmount(p.amount ? String(p.amount) : ""); setOriginalAmount(p.amount ? String(p.amount) : ""); setDueDate(p.dueDate || ""); setLegalStage(p.legalStage || ""); setNotes(p.notes || "");
     } catch (err) { console.error(err); alert(t("photoError")); }
     setAnalyzing(false);
   };
@@ -417,12 +439,9 @@ function AddDebtModal({ onAdd, onClose }) {
           <div style={{ ...S.fg, flex: 1 }}><label style={S.fLabel}>{t("amount")}</label><input style={S.fInput} type="number" value={amount} onChange={e => { setAmount(e.target.value); if (!originalAmount) setOriginalAmount(e.target.value); }} placeholder="0.00" /></div>
           <div style={{ ...S.fg, flex: 1 }}><label style={S.fLabel}>{t("original")}</label><input style={S.fInput} type="number" value={originalAmount} onChange={e => setOriginalAmount(e.target.value)} placeholder="0.00" /></div>
         </div>
-        <div style={S.fRow}>
-          <div style={{ ...S.fg, flex: 1 }}><label style={S.fLabel}>{t("dueDate")}</label><input style={S.fInput} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} /></div>
-          <div style={{ ...S.fg, flex: 1 }}><label style={S.fLabel}>{t("stage")}</label><select style={S.fSelect} value={stage} onChange={e => setStage(e.target.value)}>{STAGE_KEYS.map(s => <option key={s.id} value={s.id}>{t(s.labelKey)}</option>)}</select></div>
-        </div>
+        <div style={S.fg}><label style={S.fLabel}>{t("dueDate")}</label><input style={S.fInput} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} /></div>
         <div style={S.fg}><label style={S.fLabel}>{t("noteLabel")}</label><input style={S.fInput} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t("notePlaceholder")} /></div>
-        <button style={{ ...S.submitBtn, opacity: ok ? 1 : 0.4 }} disabled={!ok} onClick={() => onAdd({ creditorType, creditorName, amount: parseFloat(amount), originalAmount: parseFloat(originalAmount || amount), dueDate, stage, notes })}>{t("save")}</button>
+        <button style={{ ...S.submitBtn, opacity: ok ? 1 : 0.4 }} disabled={!ok} onClick={() => onAdd({ creditorType, creditorName, amount: parseFloat(amount), originalAmount: parseFloat(originalAmount || amount), dueDate, legalStage, notes })}>{t("save")}</button>
       </div>
     </div>
   );
