@@ -11,6 +11,22 @@ import { translations } from "./utils/i18n";
 import { DEMO_DEBTS, DEMO_INCOME } from "./constants/demoData";
 import { getCreditor, getStageData } from "./constants/creditors";
 
+const IconHome = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
+  </svg>
+);
+const IconCamera = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+  </svg>
+);
+const IconMessage = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+
 export default function SchuldOverzicht() {
   const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("dashboard");
@@ -49,7 +65,7 @@ export default function SchuldOverzicht() {
         const timeStr = diff === 0 ? t("dueToday") : (diff > 1 ? t("dueInPlural").replace("{n}", diff) : t("dueIn").replace("{n}", diff));
         notifs.push({ type: "urgent", text: `${credLabel}: ${fmt(d.amount)} ${t("expires")} ${timeStr}`, debtId: d.id });
       }
-      if (d.stage === "incassobureau" || d.stage === "deurwaarder" || d.stage === "dagvaarding") {
+      if (d.stage === "action_needed") {
         const credLabel = t(getCreditor(d.creditorType).labelKey);
         const stageLabel = t(getStageData(d.stage).labelKey);
         notifs.push({ type: "escalation", text: `${credLabel} ${t("inPhase").replace("{stage}", stageLabel)}`, debtId: d.id });
@@ -66,9 +82,9 @@ export default function SchuldOverzicht() {
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
 
   const tabs = [
-    { id: "dashboard", icon: "◉", lk: "overview" },
-    { id: "upload",    icon: "+",  lk: "upload",  action: () => setShowAddDebt(true) },
-    { id: "calendar",  icon: "💬", lk: "advisor"  },
+    { id: "dashboard", icon: <IconHome />,    lk: "overview" },
+    { id: "upload",    icon: <IconCamera />,  lk: "scan",    action: () => setShowAddDebt(true) },
+    { id: "calendar",  icon: <IconMessage />, lk: "advisor"  },
   ];
 
   return (
@@ -123,11 +139,10 @@ export default function SchuldOverzicht() {
         </main>
 
         {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => setShowAddDebt(false)} />}
-        <button style={S.fab} className="doei-fab" onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
-        <nav style={S.nav} className="doei-nav">
+<nav style={S.nav} className="doei-nav">
           {tabs.map(tab => (
             <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
-              <span style={{ fontSize: 20 }}>{tab.icon}</span><span style={S.navLabel}>{t(tab.lk)}</span>
+              {tab.icon}<span style={S.navLabel}>{t(tab.lk)}</span>
             </button>
           ))}
         </nav>
