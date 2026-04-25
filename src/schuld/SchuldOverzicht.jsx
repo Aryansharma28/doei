@@ -10,8 +10,8 @@ const translations = {
     now: "Nu", months3: "3 mnd", months6: "6 mnd", months12: "12 mnd",
     m3: "3m", m6: "6m", m12: "12m",
     stageOverview: "Stadium overzicht",
-    invoice: "Factuur", reminder: "Herinnering", warning: "Aanmaning",
-    collection: "Incasso", bailiff: "Deurwaarder",
+    invoice: "Factuur", reminder: "Herinnering", collection_agency: "Incassobureau",
+    bailiff: "Deurwaarder", summons: "Dagvaarding",
     perCreditor: "Per schuldeiser",
     dueSoon: "⚠ Binnenkort te betalen",
     today: "Vandaag!", inDays: "Over {n} dag", inDaysPlural: "Over {n} dagen",
@@ -49,8 +49,8 @@ const translations = {
     now: "Now", months3: "3 mo", months6: "6 mo", months12: "12 mo",
     m3: "3m", m6: "6m", m12: "12m",
     stageOverview: "Stage Overview",
-    invoice: "Invoice", reminder: "Reminder", warning: "Warning",
-    collection: "Collection", bailiff: "Bailiff",
+    invoice: "Invoice", reminder: "Reminder", collection_agency: "Debt Collection Agency",
+    bailiff: "Bailiff", summons: "Summons",
     perCreditor: "By Creditor",
     dueSoon: "⚠ Due Soon",
     today: "Today!", inDays: "In {n} day", inDaysPlural: "In {n} days",
@@ -111,19 +111,19 @@ const CREDITOR_TYPES = [
 const STAGE_KEYS = [
   { id: "factuur", labelKey: "invoice", color: "#81B29A" },
   { id: "herinnering", labelKey: "reminder", color: "#F2CC8F" },
-  { id: "aanmaning", labelKey: "warning", color: "#F4A261" },
-  { id: "incasso", labelKey: "collection", color: "#E76F51" },
+  { id: "incassobureau", labelKey: "collection_agency", color: "#E76F51" },
   { id: "deurwaarder", labelKey: "bailiff", color: "#9B2226" },
+  { id: "dagvaarding", labelKey: "summons", color: "#6A0572" },
 ];
 
 const DEMO_DEBTS = [
-  { id: "d1", creditorType: "belasting", creditorName: "Belastingdienst", amount: 2340, originalAmount: 2100, dueDate: "2026-05-10", stage: "aanmaning", notes: "Inkomstenbelasting 2024", createdAt: "2026-01-15" },
-  { id: "d2", creditorType: "cjib", creditorName: "CJIB", amount: 490, originalAmount: 380, dueDate: "2026-05-03", stage: "incasso", notes: "Verkeersboete A10", createdAt: "2026-02-20" },
+  { id: "d1", creditorType: "belasting", creditorName: "Belastingdienst", amount: 2340, originalAmount: 2100, dueDate: "2026-05-10", stage: "incassobureau", notes: "Inkomstenbelasting 2024", createdAt: "2026-01-15" },
+  { id: "d2", creditorType: "cjib", creditorName: "CJIB", amount: 490, originalAmount: 380, dueDate: "2026-05-03", stage: "incassobureau", notes: "Verkeersboete A10", createdAt: "2026-02-20" },
   { id: "d3", creditorType: "zorg", creditorName: "Zilveren Kruis", amount: 876, originalAmount: 876, dueDate: "2026-05-18", stage: "herinnering", notes: "Eigen risico 2025", createdAt: "2026-03-10" },
-  { id: "d4", creditorType: "energie", creditorName: "Vattenfall", amount: 1240, originalAmount: 980, dueDate: "2026-04-28", stage: "incasso", notes: "Jaarafrekening gas/stroom", createdAt: "2025-11-05" },
+  { id: "d4", creditorType: "energie", creditorName: "Vattenfall", amount: 1240, originalAmount: 980, dueDate: "2026-04-28", stage: "incassobureau", notes: "Jaarafrekening gas/stroom", createdAt: "2025-11-05" },
   { id: "d5", creditorType: "gemeente", creditorName: "Gemeente Amsterdam", amount: 650, originalAmount: 650, dueDate: "2026-06-01", stage: "factuur", notes: "Gemeentebelasting 2026", createdAt: "2026-04-01" },
   { id: "d6", creditorType: "toeslagen", creditorName: "Belastingdienst/Toeslagen", amount: 1820, originalAmount: 1820, dueDate: "2026-05-25", stage: "herinnering", notes: "Zorgtoeslag terugvordering", createdAt: "2026-03-28" },
-  { id: "d7", creditorType: "huur", creditorName: "Ymere", amount: 430, originalAmount: 430, dueDate: "2026-05-01", stage: "aanmaning", notes: "Huurachterstand maart", createdAt: "2026-04-05" },
+  { id: "d7", creditorType: "huur", creditorName: "Ymere", amount: 430, originalAmount: 430, dueDate: "2026-05-01", stage: "incassobureau", notes: "Huurachterstand maart", createdAt: "2026-04-05" },
 ];
 
 const DEMO_MAIL = [
@@ -186,7 +186,7 @@ export default function SchuldOverzicht() {
         const timeStr = diff === 0 ? t("dueToday") : (diff > 1 ? t("dueInPlural").replace("{n}", diff) : t("dueIn").replace("{n}", diff));
         notifs.push({ type: "urgent", text: `${credLabel}: ${fmt(d.amount)} ${t("expires")} ${timeStr}`, debtId: d.id });
       }
-      if (d.stage === "incasso" || d.stage === "deurwaarder") {
+      if (d.stage === "incassobureau" || d.stage === "deurwaarder" || d.stage === "dagvaarding") {
         const credLabel = t(getCreditor(d.creditorType).labelKey);
         const stageLabel = t(getStageData(d.stage).labelKey);
         notifs.push({ type: "escalation", text: `${credLabel} ${t("inPhase").replace("{stage}", stageLabel)}`, debtId: d.id });
@@ -199,14 +199,6 @@ export default function SchuldOverzicht() {
   const totalOriginal = debts.reduce((s, d) => s + d.originalAmount, 0);
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
-  const projectDebt = (months) => debts.reduce((total, d) => {
-    const rate = (d.stage === "incasso" || d.stage === "deurwaarder") ? 0.02 : (d.stage === "aanmaning" ? 0.01 : 0.005);
-    return total + d.amount * Math.pow(1 + rate, months);
-  }, 0);
-  const projected3 = projectDebt(3);
-  const projected6 = projectDebt(6);
-  const projected12 = projectDebt(12);
-
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setMail(prev => prev.filter(m => m.debtId !== id)); setSelectedDebt(null); };
 
@@ -231,7 +223,7 @@ export default function SchuldOverzicht() {
           </div>
         </header>
         <main style={S.main}>
-          {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} projected3={projected3} projected6={projected6} projected12={projected12} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
+          {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
           {screen === "debts" && <DebtList debts={debts} onSelect={(d) => { setSelectedDebt(d); setScreen("detail"); }} onAdd={() => setShowAddDebt(true)} />}
           {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} mail={mail.filter(m => m.debtId === selectedDebt.id)} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
           {screen === "mail" && <MailLog mail={mail} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
@@ -253,7 +245,7 @@ export default function SchuldOverzicht() {
 }
 
 // ─── Dashboard ───
-function Dashboard({ debts, totalDebt, escalationCost, projected3, projected6, projected12, monthlyIncome, notifications, onViewDebt, onNavigate }) {
+function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notifications, onViewDebt, onNavigate }) {
   const { t } = useLang();
   const byCreditor = {}; debts.forEach(d => { byCreditor[d.creditorType] = (byCreditor[d.creditorType] || 0) + d.amount; });
   const sorted = Object.entries(byCreditor).sort((a, b) => b[1] - a[1]);
@@ -271,17 +263,6 @@ function Dashboard({ debts, totalDebt, escalationCost, projected3, projected6, p
           <div style={S.heroStat}><div style={S.heroStatLabel}>{t("debtsCount")}</div><div style={S.heroStatVal}>{debts.length}</div></div>
           <div style={S.heroStat}><div style={S.heroStatLabel}>{t("creditors")}</div><div style={S.heroStatVal}>{new Set(debts.map(d => d.creditorType)).size}</div></div>
           <div style={S.heroStat}><div style={S.heroStatLabel}>{t("incomeMonth")}</div><div style={S.heroStatVal}>{fmt(monthlyIncome)}</div></div>
-        </div>
-      </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>{t("debtTrajectory")}</div>
-        <div style={S.cardSub}>{t("projectionSub")}</div>
-        <TrajectoryChart now={totalDebt} m3={projected3} m6={projected6} m12={projected12} />
-        <div style={S.projRow}>
-          <PPill label={t("now")} value={totalDebt} />
-          <PPill label={t("months3")} value={projected3} delta={projected3 - totalDebt} />
-          <PPill label={t("months6")} value={projected6} delta={projected6 - totalDebt} />
-          <PPill label={t("months12")} value={projected12} delta={projected12 - totalDebt} />
         </div>
       </div>
       <div style={S.card}>
@@ -305,33 +286,6 @@ function Dashboard({ debts, totalDebt, escalationCost, projected3, projected6, p
       {notifications.length > 0 && <button style={S.alertBanner} onClick={() => onNavigate("alerts")}><span>🔔</span><span>{notifications.length} {t("alertsTap")}</span><span>→</span></button>}
     </div>
   );
-}
-
-function TrajectoryChart({ now, m3, m6, m12 }) {
-  const { t } = useLang();
-  const max = m12 * 1.1, w = 320, h = 140, pad = 30;
-  const pts = [
-    { x: pad, y: h - pad - ((now / max) * (h - 2 * pad)) },
-    { x: pad + (w - 2 * pad) * 0.25, y: h - pad - ((m3 / max) * (h - 2 * pad)) },
-    { x: pad + (w - 2 * pad) * 0.5, y: h - pad - ((m6 / max) * (h - 2 * pad)) },
-    { x: w - pad, y: h - pad - ((m12 / max) * (h - 2 * pad)) },
-  ];
-  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-  const area = `${line} L${w - pad},${h - pad} L${pad},${h - pad} Z`;
-  const labels = [t("now"), t("m3"), t("m6"), t("m12")];
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 140 }}>
-      <defs><linearGradient id="aG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E07A5F" stopOpacity="0.3" /><stop offset="100%" stopColor="#E07A5F" stopOpacity="0.02" /></linearGradient></defs>
-      {[0.25, 0.5, 0.75].map(f => <line key={f} x1={pad} y1={h - pad - f * (h - 2 * pad)} x2={w - pad} y2={h - pad - f * (h - 2 * pad)} stroke="#e5e5e5" strokeWidth="0.5" />)}
-      <path d={area} fill="url(#aG)" /><path d={line} fill="none" stroke="#E07A5F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i === 0 ? 5 : 4} fill={i === 0 ? "#3D405B" : "#E07A5F"} stroke="white" strokeWidth="2" />)}
-      {labels.map((l, i) => <text key={i} x={pts[i].x} y={h - 8} textAnchor="middle" fill="#888" fontSize="11" fontFamily="inherit">{l}</text>)}
-    </svg>
-  );
-}
-
-function PPill({ label, value, delta }) {
-  return (<div style={S.projPill}><div style={S.projPillL}>{label}</div><div style={S.projPillV}>{fmt(value)}</div>{delta != null && delta > 0 && <div style={S.projPillD}>+{fmt(delta)}</div>}</div>);
 }
 
 // ─── Debt List ───

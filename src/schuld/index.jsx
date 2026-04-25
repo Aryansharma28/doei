@@ -53,7 +53,7 @@ export default function SchuldOverzicht() {
         const timeStr = diff === 0 ? t("dueToday") : (diff > 1 ? t("dueInPlural").replace("{n}", diff) : t("dueIn").replace("{n}", diff));
         notifs.push({ type: "urgent", text: `${credLabel}: ${fmt(d.amount)} ${t("expires")} ${timeStr}`, debtId: d.id });
       }
-      if (d.stage === "incasso" || d.stage === "deurwaarder") {
+      if (d.stage === "incassobureau" || d.stage === "deurwaarder" || d.stage === "dagvaarding") {
         const credLabel = t(getCreditor(d.creditorType).labelKey);
         const stageLabel = t(getStageData(d.stage).labelKey);
         notifs.push({ type: "escalation", text: `${credLabel} ${t("inPhase").replace("{stage}", stageLabel)}`, debtId: d.id });
@@ -66,14 +66,6 @@ export default function SchuldOverzicht() {
   const totalOriginal = debts.reduce((s, d) => s + d.originalAmount, 0);
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
-  const projectDebt = (months) => debts.reduce((total, d) => {
-    const rate = (d.stage === "incasso" || d.stage === "deurwaarder") ? 0.02 : (d.stage === "aanmaning" ? 0.01 : 0.005);
-    return total + d.amount * Math.pow(1 + rate, months);
-  }, 0);
-  const projected3 = projectDebt(3);
-  const projected6 = projectDebt(6);
-  const projected12 = projectDebt(12);
-
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setMail(prev => prev.filter(m => m.debtId !== id)); setSelectedDebt(null); };
 
@@ -102,11 +94,6 @@ export default function SchuldOverzicht() {
                 {t(tab.lk)}
               </button>
             ))}
-            {notifications.length > 0 && (
-              <button className="doei-sidebar-notif" onClick={() => setScreen("alerts")}>
-                <span>🔔</span> {notifications.length} alert{notifications.length !== 1 ? "s" : ""}
-              </button>
-            )}
           </nav>
           <div className="doei-sidebar-bottom">
             <button className="doei-sidebar-add" onClick={() => setShowAddDebt(true)}>
@@ -128,20 +115,15 @@ export default function SchuldOverzicht() {
                 <span style={{ ...S.langOpt, ...(lang === "en" ? S.langActive : {}) }}>EN</span>
                 <span style={{ ...S.langOpt, ...(lang === "nl" ? S.langActive : {}) }}>NL</span>
               </button>
-              {notifications.length > 0 && (
-                <button style={S.notifBadge} onClick={() => setScreen("alerts")}>
-                  <span>🔔</span><span style={S.notifCount}>{notifications.length}</span>
-                </button>
-              )}
             </div>
           </div>
         </header>
 
         {/* ── Main content ── */}
         <main style={S.main} className="doei-main">
-          {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} projected3={projected3} projected6={projected6} projected12={projected12} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
+          {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
           {screen === "debts" && <DebtList debts={debts} onSelect={(d) => { setSelectedDebt(d); setScreen("detail"); }} onAdd={() => setShowAddDebt(true)} />}
-          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} mail={mail.filter(m => m.debtId === selectedDebt.id)} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
+          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
           {screen === "mail" && <MailLog mail={mail} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
