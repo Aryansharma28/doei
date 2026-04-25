@@ -53,6 +53,7 @@ export default function SchuldOverzicht() {
   const [notifications, setNotifications] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("doei-theme") || "light");
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const scanRef = useRef();
 
   useLayoutEffect(() => {
@@ -61,6 +62,16 @@ export default function SchuldOverzicht() {
   }, [theme]);
 
   const toggleTheme = () => setTheme(t => t === "light" ? "dark" : "light");
+
+  useEffect(() => {
+    if (!showLangMenu) return;
+    const close = () => setShowLangMenu(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [showLangMenu]);
+
+  const LANGS = [{ code: "en", flag: "🇬🇧", label: "English" }, { code: "nl", flag: "🇳🇱", label: "Nederlands" }];
+  const currentLang = LANGS.find(l => l.code === lang);
 
   const t = useCallback((key) => translations[lang]?.[key] || translations.en[key] || key, [lang]);
   const fmtDate = useCallback((d) => new Date(d).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }), [lang]);
@@ -151,10 +162,13 @@ export default function SchuldOverzicht() {
             ))}
           </nav>
           <div className="doei-sidebar-bottom">
-            <button className="doei-sidebar-lang" onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
-              <span className={`doei-sidebar-lang-opt${lang === "en" ? " active" : ""}`}>EN</span>
-              <span className={`doei-sidebar-lang-opt${lang === "nl" ? " active" : ""}`}>NL</span>
-            </button>
+            <div className="doei-sidebar-lang">
+              {LANGS.map(l => (
+                <button key={l.code} className={`doei-sidebar-lang-opt${lang === l.code ? " active" : ""}`} onClick={() => setLang(l.code)}>
+                  {l.flag} {l.code.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <button className="doei-sidebar-theme" onClick={toggleTheme}>
               <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>
               {theme === "light" ? <IconMoon /> : <IconSun />}
@@ -180,10 +194,23 @@ export default function SchuldOverzicht() {
               <button style={S.themeBtn} onClick={toggleTheme}>
                 {theme === "light" ? <IconMoon /> : <IconSun />}
               </button>
-              <button style={S.langToggle} onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
-                <span style={{ ...S.langOpt, ...(lang === "en" ? S.langActive : {}) }}>EN</span>
-                <span style={{ ...S.langOpt, ...(lang === "nl" ? S.langActive : {}) }}>NL</span>
-              </button>
+              <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
+                <button style={S.langDropBtn} onClick={() => setShowLangMenu(v => !v)}>
+                  <span>{currentLang.flag}</span>
+                  <span>{currentLang.code.toUpperCase()}</span>
+                  <span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
+                </button>
+                {showLangMenu && (
+                  <div style={S.langDropMenu}>
+                    {LANGS.map((l, i) => (
+                      <button key={l.code} style={{ ...S.langDropItem, ...(lang === l.code ? S.langDropItemActive : {}), ...(i === LANGS.length - 1 ? { borderBottom: "none" } : {}) }} onClick={() => { setLang(l.code); setShowLangMenu(false); }}>
+                        <span style={{ fontSize: 18 }}>{l.flag}</span>
+                        <span>{l.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
