@@ -24,7 +24,7 @@ export const globalCSS = `
 
   /* ── Light mode tokens ─────────────────────────────────── */
   :root {
-    --body-bg: linear-gradient(135deg, #DCE8F5 0%, #EDE5F5 40%, #F5E8D5 70%, #E0F0E8 100%);
+    --body-bg: linear-gradient(160deg, #E8EDF5 0%, #EDE8F5 40%, #F5EDE8 70%, #E8F5EE 100%);
     --card-bg: rgba(255,255,255,0.55);
     --card-border: rgba(255,255,255,0.82);
     --card-shadow: 0 8px 32px rgba(31,38,135,0.07), 0 2px 8px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9);
@@ -283,16 +283,18 @@ export const globalCSS = `
     }
     .doei-sidebar-lang-opt {
       flex: 1;
-      text-align: center;
-      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 8px;
       border-radius: 6px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--sidebar-lang-opt);
-      letter-spacing: 0.5px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      opacity: 0.45;
       transition: all 0.2s;
     }
-    .doei-sidebar-lang-opt.active { background: var(--sidebar-lang-active-bg); color: var(--sidebar-lang-active); }
+    .doei-sidebar-lang-opt.active { background: var(--sidebar-lang-active-bg); opacity: 1; }
     .doei-sidebar-theme {
       display: flex;
       align-items: center;
