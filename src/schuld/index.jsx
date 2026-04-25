@@ -1,23 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { LangContext } from "./context/LangContext";
 import { Dashboard } from "./components/Dashboard";
-import { DebtList } from "./components/DebtList";
 import { DebtDetail } from "./components/DebtDetail";
-import { MailLog } from "./components/MailLog";
 import { Advisor } from "./components/Advisor";
 import { Alerts } from "./components/Alerts";
 import { AddDebtModal } from "./components/AddDebtModal";
 import { S } from "./styles/styles";
 import { globalCSS, storage, fmt } from "./utils/helpers";
 import { translations } from "./utils/i18n";
-import { DEMO_DEBTS, DEMO_MAIL, DEMO_INCOME } from "./constants/demoData";
+import { DEMO_DEBTS, DEMO_INCOME } from "./constants/demoData";
 import { getCreditor, getStageData } from "./constants/creditors";
 
 export default function SchuldOverzicht() {
   const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("dashboard");
   const [debts, setDebts] = useState(DEMO_DEBTS);
-  const [mail, setMail] = useState(DEMO_MAIL);
   const [income, setIncome] = useState(DEMO_INCOME);
   const [selectedDebt, setSelectedDebt] = useState(null);
   const [showAddDebt, setShowAddDebt] = useState(false);
@@ -32,7 +29,6 @@ export default function SchuldOverzicht() {
       const saved = await storage.get("app-data-v4");
       if (saved) {
         if (saved.debts) setDebts(saved.debts);
-        if (saved.mail) setMail(saved.mail);
         if (saved.income) setIncome(saved.income);
         if (saved.lang) setLang(saved.lang);
       }
@@ -40,7 +36,7 @@ export default function SchuldOverzicht() {
     })();
   }, []);
 
-  useEffect(() => { if (loaded) storage.set("app-data-v4", { debts, mail, income, lang }); }, [debts, mail, income, lang, loaded]);
+  useEffect(() => { if (loaded) storage.set("app-data-v4", { debts, income, lang }); }, [debts, income, lang, loaded]);
 
   useEffect(() => {
     const today = new Date();
@@ -67,12 +63,11 @@ export default function SchuldOverzicht() {
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
-  const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setMail(prev => prev.filter(m => m.debtId !== id)); setSelectedDebt(null); };
+  const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
 
   const tabs = [
     { id: "dashboard", icon: "◉", lk: "overview" },
-    { id: "debts",     icon: "☰", lk: "debts"    },
-    { id: "mail",      icon: "✉", lk: "mail"      },
+    { id: "upload",    icon: "+",  lk: "upload",  action: () => setShowAddDebt(true) },
     { id: "calendar",  icon: "💬", lk: "advisor"  },
   ];
 
@@ -89,7 +84,7 @@ export default function SchuldOverzicht() {
           </div>
           <nav className="doei-sidebar-nav">
             {tabs.map(tab => (
-              <button key={tab.id} className={`doei-sidebar-btn${screen === tab.id ? " active" : ""}`} onClick={() => setScreen(tab.id)}>
+              <button key={tab.id} className={`doei-sidebar-btn${screen === tab.id ? " active" : ""}`} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
                 <span className="doei-sidebar-icon">{tab.icon}</span>
                 {t(tab.lk)}
               </button>
@@ -122,9 +117,7 @@ export default function SchuldOverzicht() {
         {/* ── Main content ── */}
         <main style={S.main} className="doei-main">
           {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
-          {screen === "debts" && <DebtList debts={debts} onSelect={(d) => { setSelectedDebt(d); setScreen("detail"); }} onAdd={() => setShowAddDebt(true)} />}
-          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
-          {screen === "mail" && <MailLog mail={mail} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
+          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
         </main>
@@ -133,7 +126,7 @@ export default function SchuldOverzicht() {
         <button style={S.fab} className="doei-fab" onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
         <nav style={S.nav} className="doei-nav">
           {tabs.map(tab => (
-            <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => setScreen(tab.id)}>
+            <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
               <span style={{ fontSize: 20 }}>{tab.icon}</span><span style={S.navLabel}>{t(tab.lk)}</span>
             </button>
           ))}

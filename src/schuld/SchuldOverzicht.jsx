@@ -126,15 +126,6 @@ const DEMO_DEBTS = [
   { id: "d7", creditorType: "huur", creditorName: "Ymere", amount: 430, originalAmount: 430, dueDate: "2026-05-01", stage: "incassobureau", notes: "Huurachterstand maart", createdAt: "2026-04-05" },
 ];
 
-const DEMO_MAIL = [
-  { id: "m1", debtId: "d1", date: "2026-04-20", subject: "Aanmaning inkomstenbelasting", creditorType: "belasting", status: "action", amount: 2340 },
-  { id: "m2", debtId: "d2", date: "2026-04-18", subject: "Overdracht aan incasso", creditorType: "cjib", status: "action", amount: 490 },
-  { id: "m3", debtId: "d4", date: "2026-04-15", subject: "Laatste herinnering jaarafrekening", creditorType: "energie", status: "escalated", amount: 1240 },
-  { id: "m4", debtId: "d3", date: "2026-04-12", subject: "Betalingsherinnering eigen risico", creditorType: "zorg", status: "action", amount: 876 },
-  { id: "m5", debtId: "d7", date: "2026-04-10", subject: "Aanmaning huurachterstand", creditorType: "huur", status: "done", amount: 430 },
-  { id: "m6", debtId: "d6", date: "2026-04-08", subject: "Terugvordering zorgtoeslag", creditorType: "toeslagen", status: "action", amount: 1820 },
-];
-
 const DEMO_INCOME = [
   { id: "i1", label: "Salaris", amount: 2180, day: 25 },
   { id: "i2", label: "Zorgtoeslag", amount: 154, day: 20 },
@@ -150,7 +141,6 @@ export default function SchuldOverzicht() {
   const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("dashboard");
   const [debts, setDebts] = useState(DEMO_DEBTS);
-  const [mail, setMail] = useState(DEMO_MAIL);
   const [income, setIncome] = useState(DEMO_INCOME);
   const [selectedDebt, setSelectedDebt] = useState(null);
   const [showAddDebt, setShowAddDebt] = useState(false);
@@ -165,7 +155,6 @@ export default function SchuldOverzicht() {
       const saved = await storage.get("app-data-v2");
       if (saved) {
         if (saved.debts) setDebts(saved.debts);
-        if (saved.mail) setMail(saved.mail);
         if (saved.income) setIncome(saved.income);
         if (saved.lang) setLang(saved.lang);
       }
@@ -173,7 +162,7 @@ export default function SchuldOverzicht() {
     })();
   }, []);
 
-  useEffect(() => { if (loaded) storage.set("app-data-v2", { debts, mail, income, lang }); }, [debts, mail, income, lang, loaded]);
+  useEffect(() => { if (loaded) storage.set("app-data-v2", { debts, income, lang }); }, [debts, income, lang, loaded]);
 
   useEffect(() => {
     const today = new Date();
@@ -200,7 +189,7 @@ export default function SchuldOverzicht() {
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
-  const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setMail(prev => prev.filter(m => m.debtId !== id)); setSelectedDebt(null); };
+  const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
 
   return (
     <LangContext.Provider value={{ lang, t, fmtDate }}>
@@ -224,17 +213,15 @@ export default function SchuldOverzicht() {
         </header>
         <main style={S.main}>
           {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
-          {screen === "debts" && <DebtList debts={debts} onSelect={(d) => { setSelectedDebt(d); setScreen("detail"); }} onAdd={() => setShowAddDebt(true)} />}
-          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} mail={mail.filter(m => m.debtId === selectedDebt.id)} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
-          {screen === "mail" && <MailLog mail={mail} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
+          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
           {screen === "calendar" && <CalendarView debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
         </main>
         {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => setShowAddDebt(false)} />}
         <button style={S.fab} onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
         <nav style={S.nav}>
-          {[{ id: "dashboard", icon: "◉", lk: "overview" }, { id: "debts", icon: "☰", lk: "debts" }, { id: "mail", icon: "✉", lk: "mail" }, { id: "calendar", icon: "📅", lk: "calendar" }].map(tab => (
-            <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => setScreen(tab.id)}>
+          {[{ id: "dashboard", icon: "◉", lk: "overview" }, { id: "upload", icon: "+", lk: "upload", action: () => setShowAddDebt(true) }, { id: "calendar", icon: "📅", lk: "calendar" }].map(tab => (
+            <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
               <span style={{ fontSize: 20 }}>{tab.icon}</span><span style={S.navLabel}>{t(tab.lk)}</span>
             </button>
           ))}
@@ -246,10 +233,8 @@ export default function SchuldOverzicht() {
 
 // ─── Dashboard ───
 function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notifications, onViewDebt, onNavigate }) {
-  const { t } = useLang();
-  const byCreditor = {}; debts.forEach(d => { byCreditor[d.creditorType] = (byCreditor[d.creditorType] || 0) + d.amount; });
-  const sorted = Object.entries(byCreditor).sort((a, b) => b[1] - a[1]);
-  const urgentDebts = debts.filter(d => { const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return diff <= 7 && diff >= 0; }).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  const { t, fmtDate } = useLang();
+  const sortedDebts = [...debts].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   const byStage = {}; debts.forEach(d => { if (!byStage[d.stage]) byStage[d.stage] = { count: 0, amount: 0 }; byStage[d.stage].count++; byStage[d.stage].amount += d.amount; });
 
   return (
@@ -270,19 +255,13 @@ function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notificati
         <div style={S.stageBar}>{STAGE_KEYS.map(s => { const d = byStage[s.id]; if (!d) return null; return <div key={s.id} style={{ ...S.stageSeg, width: `${Math.max((d.amount / totalDebt) * 100, 8)}%`, backgroundColor: s.color }} />; })}</div>
         <div style={S.stageLegend}>{STAGE_KEYS.map(s => { const d = byStage[s.id]; if (!d) return null; return (<div key={s.id} style={S.stageLI}><span style={{ ...S.stageDot, backgroundColor: s.color }} /><span style={S.stageLL}>{t(s.labelKey)}</span><span style={S.stageLV}>{d.count}× {fmt(d.amount)}</span></div>); })}</div>
       </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>{t("perCreditor")}</div>
-        {sorted.map(([type, amount]) => { const c = getCreditor(type); const pct = (amount / totalDebt) * 100; return (
-          <div key={type} style={S.bRow}><span style={S.bIcon}>{c.icon}</span><div style={S.bInfo}><div style={S.bLabel}>{t(c.labelKey)}</div><div style={S.bBarOut}><div style={{ ...S.bBarIn, width: `${pct}%`, backgroundColor: c.color }} /></div></div><span style={S.bAmt}>{fmt(amount)}</span></div>
-        ); })}
-      </div>
-      {urgentDebts.length > 0 && (
-        <div style={S.card}><div style={{ ...S.cardTitle, color: "#E07A5F" }}>{t("dueSoon")}</div>
-          {urgentDebts.map(d => { const c = getCreditor(d.creditorType); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); const ts = diff === 0 ? t("today") : (diff > 1 ? t("inDaysPlural").replace("{n}", diff) : t("inDays").replace("{n}", diff)); return (
-            <button key={d.id} style={S.urgRow} onClick={() => onViewDebt(d)}><span style={S.bIcon}>{c.icon}</span><div style={S.bInfo}><div style={S.bLabel}>{t(c.labelKey)}</div><div style={S.urgDue}>{ts}</div></div><span style={S.bAmt}>{fmt(d.amount)}</span></button>
-          ); })}
-        </div>
-      )}
+      {sortedDebts.map(d => { const c = getCreditor(d.creditorType); const s = getStageData(d.stage); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return (
+        <button key={d.id} style={S.debtCard} onClick={() => onViewDebt(d)}>
+          <div style={S.dcLeft}><span style={{ fontSize: 28 }}>{c.icon}</span></div>
+          <div style={S.dcCenter}><div style={S.dcName}>{d.creditorName}</div><div style={S.dcNotes}>{d.notes}</div><div style={S.dcMeta}><span style={{ ...S.stagePill, backgroundColor: s.color + "22", color: s.color }}>{t(s.labelKey)}</span><span style={S.dcDue}>{diff <= 0 ? t("expired") : fmtDate(d.dueDate)}</span></div></div>
+          <div style={S.dcRight}><div style={S.dcAmt}>{fmt(d.amount)}</div>{d.amount > d.originalAmount && <div style={S.dcOrig}>was {fmt(d.originalAmount)}</div>}</div>
+        </button>
+      ); })}
       {notifications.length > 0 && <button style={S.alertBanner} onClick={() => onNavigate("alerts")}><span>🔔</span><span>{notifications.length} {t("alertsTap")}</span><span>→</span></button>}
     </div>
   );
@@ -307,7 +286,7 @@ function DebtList({ debts, onSelect, onAdd }) {
 }
 
 // ─── Detail ───
-function DebtDetail({ debt, mail, onBack, onDelete }) {
+function DebtDetail({ debt, onBack, onDelete }) {
   const { t, fmtDate } = useLang();
   const c = getCreditor(debt.creditorType); const s = getStageData(debt.stage); const ci = debt.amount - debt.originalAmount;
   return (
@@ -321,27 +300,7 @@ function DebtDetail({ debt, mail, onBack, onDelete }) {
         <div style={S.dRow}><span style={S.dLabel}>{t("created")}</span><span>{fmtDate(debt.createdAt)}</span></div>
         <div style={S.dRow}><span style={S.dLabel}>{t("notes")}</span><span>{debt.notes}</span></div>
       </div>
-      {mail.length > 0 && <div style={S.card}><div style={S.cardTitle}>{t("correspondence")}</div>{mail.map(m => <div key={m.id} style={S.mailRow}><div style={S.mailDate}>{fmtDate(m.date)}</div><div style={S.mailSubj}>{m.subject}</div><span style={{ ...S.statusDot, backgroundColor: m.status === "action" ? "#E07A5F" : m.status === "escalated" ? "#9B2226" : "#81B29A" }} /></div>)}</div>}
       <button style={S.deleteBtn} onClick={() => onDelete(debt.id)}>{t("deleteDebt")}</button>
-    </div>
-  );
-}
-
-// ─── Mail Log ───
-function MailLog({ mail, onViewDebt }) {
-  const { t, fmtDate } = useLang();
-  const sorted = [...mail].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const sLabel = { action: t("actionNeeded"), done: t("handled"), escalated: t("escalated") };
-  const sColor = { action: "#E07A5F", done: "#81B29A", escalated: "#9B2226" };
-  return (
-    <div style={S.sc}><h2 style={S.screenTitle}>{t("mailOverview")}</h2><div style={S.cardSub}>{t("mailSub")}</div>
-      {sorted.map(m => { const c = getCreditor(m.creditorType); return (
-        <button key={m.id} style={S.mailCard} onClick={() => onViewDebt(m.debtId)}>
-          <div style={S.mcTop}><span style={{ fontSize: 22 }}>{c.icon}</span><span style={S.mcCred}>{t(c.labelKey)}</span><span style={S.mcDate}>{fmtDate(m.date)}</span></div>
-          <div style={S.mcSubj}>{m.subject}</div>
-          <div style={S.mcBot}><span style={{ ...S.statusPill, backgroundColor: sColor[m.status] + "18", color: sColor[m.status] }}>{sLabel[m.status]}</span><span style={S.mcAmt}>{fmt(m.amount)}</span></div>
-        </button>
-      ); })}
     </div>
   );
 }
