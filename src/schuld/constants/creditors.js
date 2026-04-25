@@ -21,9 +21,9 @@ export const CREDITOR_TYPES = [
 export const STAGE_KEYS = [
   { id: "factuur", labelKey: "invoice", color: "#81B29A" },
   { id: "herinnering", labelKey: "reminder", color: "#F2CC8F" },
-  { id: "aanmaning", labelKey: "warning", color: "#F4A261" },
-  { id: "incasso", labelKey: "collection", color: "#E76F51" },
+  { id: "incassobureau", labelKey: "collection_agency", color: "#E76F51" },
   { id: "deurwaarder", labelKey: "bailiff", color: "#9B2226" },
+  { id: "dagvaarding", labelKey: "summons", color: "#6A0572" },
 ];
 
 export const getCreditor = (id) => CREDITOR_TYPES.find(c => c.id === id) || CREDITOR_TYPES[CREDITOR_TYPES.length - 1];
