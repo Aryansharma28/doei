@@ -1,8 +1,8 @@
 export const translations = {
   nl: {
-    overview: "Overzicht", debts: "Schulden", mail: "Post", calendar: "Kalender",
+    overview: "Overzicht", debts: "Schulden", mail: "Post", calendar: "Kalender", upload: "Uploaden",
     totalDebt: "Totale schuld", collectionCosts: "incassokosten", debtsCount: "Schulden",
-    creditors: "Schuldeisers", incomeMonth: "Inkomen/mnd",
+    creditors: "Schuldeisers", avg: "Gem.", incomeMonth: "Inkomen/mnd",
     debtTrajectory: "Schuldverloop", projectionSub: "Projectie als er niets verandert",
     now: "Nu", months3: "3 mnd", months6: "6 mnd", months12: "12 mnd",
     m3: "3m", m6: "6m", m12: "12m",
@@ -55,9 +55,9 @@ export const translations = {
     advisorThinking: "Aan het nadenken...",
   },
   en: {
-    overview: "Overview", debts: "Debts", mail: "Mail", calendar: "Calendar",
+    overview: "Overview", debts: "Debts", mail: "Mail", calendar: "Calendar", upload: "Upload",
     totalDebt: "Total debt", collectionCosts: "collection costs", debtsCount: "Debts",
-    creditors: "Creditors", incomeMonth: "Income/mo",
+    creditors: "Creditors", avg: "Avg.", incomeMonth: "Income/mo",
     debtTrajectory: "Debt Trajectory", projectionSub: "Projection if nothing changes",
     now: "Now", months3: "3 mo", months6: "6 mo", months12: "12 mo",
     m3: "3m", m6: "6m", m12: "12m",
