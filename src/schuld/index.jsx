@@ -4,7 +4,7 @@ import { Dashboard } from "./components/Dashboard";
 import { DebtList } from "./components/DebtList";
 import { DebtDetail } from "./components/DebtDetail";
 import { MailLog } from "./components/MailLog";
-import { CalendarView } from "./components/CalendarView";
+import { Advisor } from "./components/Advisor";
 import { Alerts } from "./components/Alerts";
 import { AddDebtModal } from "./components/AddDebtModal";
 import { S } from "./styles/styles";
@@ -29,7 +29,7 @@ export default function SchuldOverzicht() {
 
   useEffect(() => {
     (async () => {
-      const saved = await storage.get("app-data-v2");
+      const saved = await storage.get("app-data-v4");
       if (saved) {
         if (saved.debts) setDebts(saved.debts);
         if (saved.mail) setMail(saved.mail);
@@ -40,7 +40,7 @@ export default function SchuldOverzicht() {
     })();
   }, []);
 
-  useEffect(() => { if (loaded) storage.set("app-data-v2", { debts, mail, income, lang }); }, [debts, mail, income, lang, loaded]);
+  useEffect(() => { if (loaded) storage.set("app-data-v4", { debts, mail, income, lang }); }, [debts, mail, income, lang, loaded]);
 
   useEffect(() => {
     const today = new Date();
@@ -83,7 +83,7 @@ export default function SchuldOverzicht() {
         <style>{globalCSS}</style>
         <header style={S.header}>
           <div style={S.headerInner}>
-            <div style={S.logo}><span style={S.logoIcon}>◉</span><span style={S.logoText}>SchuldWijzer</span></div>
+            <div style={S.logo}><span style={S.logoIcon}>◉</span><span style={S.logoText}>Doei Debt</span></div>
             <div style={S.headerRight}>
               <button style={S.langToggle} onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
                 <span style={{ ...S.langOpt, ...(lang === "en" ? S.langActive : {}) }}>EN</span>
@@ -102,13 +102,13 @@ export default function SchuldOverzicht() {
           {screen === "debts" && <DebtList debts={debts} onSelect={(d) => { setSelectedDebt(d); setScreen("detail"); }} onAdd={() => setShowAddDebt(true)} />}
           {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} mail={mail.filter(m => m.debtId === selectedDebt.id)} onBack={() => setScreen("debts")} onDelete={deleteDebt} />}
           {screen === "mail" && <MailLog mail={mail} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
-          {screen === "calendar" && <CalendarView debts={debts} income={income} />}
+          {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
         </main>
         {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => setShowAddDebt(false)} />}
         <button style={S.fab} onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
         <nav style={S.nav}>
-          {[{ id: "dashboard", icon: "◉", lk: "overview" }, { id: "debts", icon: "☰", lk: "debts" }, { id: "mail", icon: "✉", lk: "mail" }, { id: "calendar", icon: "📅", lk: "calendar" }].map(tab => (
+          {[{ id: "dashboard", icon: "◉", lk: "overview" }, { id: "debts", icon: "☰", lk: "debts" }, { id: "mail", icon: "✉", lk: "mail" }, { id: "calendar", icon: "💬", lk: "advisor" }].map(tab => (
             <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => setScreen(tab.id)}>
               <span style={{ fontSize: 20 }}>{tab.icon}</span><span style={S.navLabel}>{t(tab.lk)}</span>
             </button>
