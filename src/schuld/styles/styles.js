@@ -128,7 +128,7 @@ export const S = {
   alertArrow: { color: "var(--text-secondary)", fontSize: 18 },
   empty: { textAlign: "center", padding: "40px 20px", fontSize: 16, color: "var(--text-secondary)" },
   fab: { position: "fixed", bottom: 80, right: 20, width: 56, height: 56, borderRadius: 28, background: "#3D405B", color: "white", border: "none", boxShadow: "0 4px 20px rgba(61,64,91,0.3)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 },
-  nav: { position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "var(--nav-bg)", backdropFilter: "blur(20px) saturate(1.6)", WebkitBackdropFilter: "blur(20px) saturate(1.6)", borderTop: "1px solid var(--border-color)", display: "flex", padding: "8px 0 env(safe-area-inset-bottom, 8px)", zIndex: 100 },
+  nav: { position: "fixed", bottom: 0, left: 0, width: "100%", background: "var(--nav-bg)", backdropFilter: "blur(20px) saturate(1.6)", WebkitBackdropFilter: "blur(20px) saturate(1.6)", borderTop: "1px solid var(--border-color)", display: "flex", padding: "8px 0 env(safe-area-inset-bottom, 8px)", zIndex: 100 },
   navBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "6px 0", color: "var(--text-secondary)", transition: "color 0.2s" },
   navBtnActive: { color: "var(--nav-active-color)" },
   navLabel: { fontSize: 11, fontWeight: 600 },
