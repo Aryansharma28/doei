@@ -10,6 +10,7 @@ const translations = {
     now: "Nu", months3: "3 mnd", months6: "6 mnd", months12: "12 mnd",
     m3: "3m", m6: "6m", m12: "12m",
     stageOverview: "Stadium overzicht",
+    stage_stable: "Stabiel", stage_warning: "Waarschuwing", stage_action_needed: "Actie vereist",
     invoice: "Factuur", reminder: "Herinnering", collection_agency: "Incassobureau",
     bailiff: "Deurwaarder", summons: "Dagvaarding",
     perCreditor: "Per schuldeiser",
@@ -49,6 +50,7 @@ const translations = {
     now: "Now", months3: "3 mo", months6: "6 mo", months12: "12 mo",
     m3: "3m", m6: "6m", m12: "12m",
     stageOverview: "Stage Overview",
+    stage_stable: "Stable", stage_warning: "Warning", stage_action_needed: "Action Needed",
     invoice: "Invoice", reminder: "Reminder", collection_agency: "Debt Collection Agency",
     bailiff: "Bailiff", summons: "Summons",
     perCreditor: "By Creditor",
@@ -256,7 +258,7 @@ function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notificati
   const { t, fmtDate } = useLang();
   const stagePriority = { action_needed: 0, warning: 1, stable: 2 };
   const sortedDebts = [...debts].sort((a, b) => (stagePriority[a.stage] ?? 3) - (stagePriority[b.stage] ?? 3) || b.amount - a.amount);
-  const byStage = {}; debts.forEach(d => { byStage[d.stage] = (byStage[d.stage] || 0) + 1; });
+  const byStage = {}; debts.forEach(d => { const sid = getStageData(d.stage).id; byStage[sid] = (byStage[sid] || 0) + 1; });
 
   return (
     <div style={S.sc}>

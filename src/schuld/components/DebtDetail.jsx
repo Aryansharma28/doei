@@ -115,7 +115,7 @@ export function DebtDetail({ debt, onBack, onDelete }) {
         <span style={{ ...S.stagePill, backgroundColor: s.color + "22", color: s.color, fontSize: 13, padding: "5px 14px" }}>{t(s.labelKey)}</span>
       </div>
 
-      {/* AI Action Items */}
+      {/* TODO: AI Action Items — connect to real AI-generated content */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiActionItems")}</div>
         {actionLoading ? <LoadingDots /> : (
@@ -127,7 +127,7 @@ export function DebtDetail({ debt, onBack, onDelete }) {
         )}
       </div>
 
-      {/* AI Summary */}
+      {/* TODO: AI Summary — connect to real AI-generated content */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiSummary")}</div>
         {summaryLoading ? <LoadingDots /> : (
@@ -157,11 +157,6 @@ export function DebtDetail({ debt, onBack, onDelete }) {
       {/* Correspondence */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 14 }}>{t("correspondence")}</div>
-        <label style={{ ...S.docUploadBtn, color: uploading ? "#999" : "#3D405B", cursor: uploading ? "not-allowed" : "pointer" }}>
-          {uploading ? "Uploading..." : `📎 ${t("addDocument")}`}
-          <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
-        </label>
-        {uploadError && <div style={{ fontSize: 12, color: "#E07A5F", marginTop: 8 }}>{uploadError}</div>}
         {docs.length > 0 ? (
           <div style={{ marginTop: 14 }}>
             <div style={S.docTableHdr}>

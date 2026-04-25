@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { LangContext } from "./context/LangContext";
 import { Dashboard } from "./components/Dashboard";
 import { DebtDetail } from "./components/DebtDetail";
@@ -10,6 +10,7 @@ import { globalCSS, storage, fmt } from "./utils/helpers";
 import { translations } from "./utils/i18n";
 import { DEMO_DEBTS, DEMO_INCOME } from "./constants/demoData";
 import { getCreditor, getStageData } from "./constants/creditors";
+import { supabase } from "../lib/supabase";
 
 const IconHome = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -34,8 +35,10 @@ export default function SchuldOverzicht() {
   const [income, setIncome] = useState(DEMO_INCOME);
   const [selectedDebt, setSelectedDebt] = useState(null);
   const [showAddDebt, setShowAddDebt] = useState(false);
+  const [scanInitData, setScanInitData] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const scanRef = useRef();
 
   const t = useCallback((key) => translations[lang]?.[key] || translations.en[key] || key, [lang]);
   const fmtDate = useCallback((d) => new Date(d).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }), [lang]);
@@ -78,12 +81,24 @@ export default function SchuldOverzicht() {
   const totalOriginal = debts.reduce((s, d) => s + d.originalAmount, 0);
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
-  const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
+  const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); setScanInitData(null); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
+
+  const handleScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    try {
+      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = () => rej(new Error("fail")); r.readAsDataURL(file); });
+      const { data, error } = await supabase.functions.invoke("analyze-document", { body: { data: b64, mimeType: file.type || "image/jpeg" } });
+      if (!error && data) setScanInitData(data);
+    } catch {}
+    setShowAddDebt(true);
+  };
 
   const tabs = [
     { id: "dashboard", icon: <IconHome />,    lk: "overview" },
-    { id: "upload",    icon: <IconCamera />,  lk: "scan",    action: () => setShowAddDebt(true) },
+    { id: "upload",    icon: <IconCamera />,  lk: "scan",    action: () => scanRef.current?.click() },
     { id: "calendar",  icon: <IconMessage />, lk: "advisor"  },
   ];
 
@@ -95,8 +110,16 @@ export default function SchuldOverzicht() {
         {/* ── Desktop sidebar ── */}
         <aside className="doei-sidebar">
           <div className="doei-sidebar-logo">
-            <span className="doei-sidebar-logo-icon">◉</span>
-            <span className="doei-sidebar-logo-text">Doei Debt</span>
+            <svg width="30" height="30" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+              <circle cx="60" cy="60" r="58" fill="#1A1A2E"/>
+              <g transform="translate(60,60) scale(0.52)">
+                <ellipse cx="-22" cy="-22" rx="18" ry="28" transform="rotate(-45 -22 -22)" fill="#5CC8C8"/>
+                <ellipse cx="22" cy="-22" rx="18" ry="28" transform="rotate(45 22 -22)" fill="#F0C246"/>
+                <ellipse cx="-22" cy="22" rx="18" ry="28" transform="rotate(45 -22 22)" fill="#7B6CB2"/>
+                <ellipse cx="22" cy="22" rx="18" ry="28" transform="rotate(-45 22 22)" fill="#C49090"/>
+              </g>
+            </svg>
+            <span className="doei-sidebar-logo-text">doei debt</span>
           </div>
           <nav className="doei-sidebar-nav">
             {tabs.map(tab => (
@@ -107,7 +130,7 @@ export default function SchuldOverzicht() {
             ))}
           </nav>
           <div className="doei-sidebar-bottom">
-            <button className="doei-sidebar-add" onClick={() => setShowAddDebt(true)}>
+            <button className="doei-sidebar-add" onClick={() => { setScanInitData(null); setShowAddDebt(true); }}>
               + {t("addDebt")}
             </button>
             <button className="doei-sidebar-lang" onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
@@ -120,7 +143,18 @@ export default function SchuldOverzicht() {
         {/* ── Mobile header ── */}
         <header style={S.header} className="doei-header">
           <div style={S.headerInner}>
-            <div style={S.logo}><span style={S.logoIcon}>◉</span><span style={S.logoText}>Doei Debt</span></div>
+            <div style={S.logo}>
+              <svg width="30" height="30" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+                <circle cx="60" cy="60" r="58" fill="#1A1A2E"/>
+                <g transform="translate(60,60) scale(0.52)">
+                  <ellipse cx="-22" cy="-22" rx="18" ry="28" transform="rotate(-45 -22 -22)" fill="#5CC8C8"/>
+                  <ellipse cx="22" cy="-22" rx="18" ry="28" transform="rotate(45 22 -22)" fill="#F0C246"/>
+                  <ellipse cx="-22" cy="22" rx="18" ry="28" transform="rotate(45 -22 22)" fill="#7B6CB2"/>
+                  <ellipse cx="22" cy="22" rx="18" ry="28" transform="rotate(-45 22 22)" fill="#C49090"/>
+                </g>
+              </svg>
+              <span style={S.logoText}>doei debt</span>
+            </div>
             <div style={S.headerRight}>
               <button style={S.langToggle} onClick={() => setLang(l => l === "nl" ? "en" : "nl")}>
                 <span style={{ ...S.langOpt, ...(lang === "en" ? S.langActive : {}) }}>EN</span>
@@ -138,7 +172,8 @@ export default function SchuldOverzicht() {
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
         </main>
 
-        {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => setShowAddDebt(false)} />}
+        <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />
+        {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => { setShowAddDebt(false); setScanInitData(null); }} initialData={scanInitData} />}
 <nav style={S.nav} className="doei-nav">
           {tabs.map(tab => (
             <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
