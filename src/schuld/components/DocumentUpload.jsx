@@ -39,10 +39,16 @@ export function DocumentUpload({ debtId }) {
       <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, fontFamily: serif }}>
         Documenten
       </div>
-      <label style={{ display: "block", width: "100%", padding: 14, background: "#F7F7F4", border: "2px dashed var(--border-color)", borderRadius: 12, textAlign: "center", fontSize: 14, fontWeight: 600, color: uploading ? "#999" : "#3D405B", cursor: uploading ? "not-allowed" : "pointer", boxSizing: "border-box" }}>
-        {uploading ? "Uploaden..." : "📎 Voeg document toe"}
-        <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
-      </label>
+      <div style={{ display: "flex", gap: 8 }}>
+        <label style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: 14, background: "#F7F7F4", border: "2px dashed var(--border-color)", borderRadius: 12, textAlign: "center", fontSize: 14, fontWeight: 600, color: uploading ? "#999" : "#3D405B", cursor: uploading ? "not-allowed" : "pointer", boxSizing: "border-box" }}>
+          📸 Foto nemen
+          <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+        </label>
+        <label style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: 14, background: "#F7F7F4", border: "2px dashed var(--border-color)", borderRadius: 12, textAlign: "center", fontSize: 14, fontWeight: 600, color: uploading ? "#999" : "#3D405B", cursor: uploading ? "not-allowed" : "pointer", boxSizing: "border-box" }}>
+          {uploading ? "Uploaden..." : "📎 Document"}
+          <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+        </label>
+      </div>
       {error && <div style={{ fontSize: 12, color: "#E07A5F", marginTop: 8 }}>{error}</div>}
       {docs.length > 0 && (
         <div style={{ marginTop: 12 }}>
