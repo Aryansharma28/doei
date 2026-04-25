@@ -17,7 +17,7 @@ export function AddDebtModal({ onAdd, onClose }) {
   const [amount, setAmount] = useState("");
   const [originalAmount, setOriginalAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [stage, setStage] = useState("factuur");
+  const [stage, setStage] = useState("stable");
   const [notes, setNotes] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const fileRef = useRef();
@@ -36,7 +36,7 @@ export function AddDebtModal({ onAdd, onClose }) {
       });
       if (error) throw error;
       const p = data;
-      setCreditorType(p.creditorType || ""); setCreditorName(p.creditorName || ""); setAmount(p.amount ? String(p.amount) : ""); setOriginalAmount(p.originalAmount ? String(p.originalAmount) : p.amount ? String(p.amount) : ""); setDueDate(p.dueDate || ""); setStage(p.stage || "factuur"); setNotes(p.notes || "");
+      setCreditorType(p.creditorType || ""); setCreditorName(p.creditorName || ""); setAmount(p.amount ? String(p.amount) : ""); setOriginalAmount(p.originalAmount ? String(p.originalAmount) : p.amount ? String(p.amount) : ""); setDueDate(p.dueDate || ""); setStage(p.stage || "stable"); setNotes(p.notes || "");
       await span.end({
         model: p._model ?? "claude-haiku-4-5-20251001",
         messages: [{ role: "user", content: "(document)" }],

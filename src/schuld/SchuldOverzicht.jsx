@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef, createContext, useContext } f
 // ─── i18n System ───
 const translations = {
   nl: {
-    overview: "Overzicht", debts: "Schulden", mail: "Post", calendar: "Kalender",
+    overview: "Overzicht", debts: "Schulden", mail: "Post", calendar: "Kalender", scan: "Scan",
     totalDebt: "Totale schuld", collectionCosts: "incassokosten", debtsCount: "Schulden",
     creditors: "Schuldeisers", incomeMonth: "Inkomen/mnd",
     debtTrajectory: "Schuldverloop", projectionSub: "Projectie als er niets verandert",
@@ -42,7 +42,7 @@ const translations = {
     cr_toeslagen: "Toeslagen Terug.", cr_water: "Waterbedrijf", cr_overig: "Overig",
   },
   en: {
-    overview: "Overview", debts: "Debts", mail: "Mail", calendar: "Calendar",
+    overview: "Overview", debts: "Debts", mail: "Mail", calendar: "Calendar", scan: "Scan",
     totalDebt: "Total debt", collectionCosts: "collection costs", debtsCount: "Debts",
     creditors: "Creditors", incomeMonth: "Income/mo",
     debtTrajectory: "Debt Trajectory", projectionSub: "Projection if nothing changes",
@@ -109,21 +109,19 @@ const CREDITOR_TYPES = [
 ];
 
 const STAGE_KEYS = [
-  { id: "factuur", labelKey: "invoice", color: "#81B29A" },
-  { id: "herinnering", labelKey: "reminder", color: "#F2CC8F" },
-  { id: "incassobureau", labelKey: "collection_agency", color: "#E76F51" },
-  { id: "deurwaarder", labelKey: "bailiff", color: "#9B2226" },
-  { id: "dagvaarding", labelKey: "summons", color: "#6A0572" },
+  { id: "stable",        labelKey: "stage_stable",        color: "#81B29A" },
+  { id: "warning",       labelKey: "stage_warning",       color: "#F2CC8F" },
+  { id: "action_needed", labelKey: "stage_action_needed", color: "#E07A5F" },
 ];
 
 const DEMO_DEBTS = [
-  { id: "d1", creditorType: "belasting", creditorName: "Belastingdienst", amount: 2340, originalAmount: 2100, dueDate: "2026-05-10", stage: "incassobureau", notes: "Inkomstenbelasting 2024", createdAt: "2026-01-15" },
-  { id: "d2", creditorType: "cjib", creditorName: "CJIB", amount: 490, originalAmount: 380, dueDate: "2026-05-03", stage: "incassobureau", notes: "Verkeersboete A10", createdAt: "2026-02-20" },
-  { id: "d3", creditorType: "zorg", creditorName: "Zilveren Kruis", amount: 876, originalAmount: 876, dueDate: "2026-05-18", stage: "herinnering", notes: "Eigen risico 2025", createdAt: "2026-03-10" },
-  { id: "d4", creditorType: "energie", creditorName: "Vattenfall", amount: 1240, originalAmount: 980, dueDate: "2026-04-28", stage: "incassobureau", notes: "Jaarafrekening gas/stroom", createdAt: "2025-11-05" },
-  { id: "d5", creditorType: "gemeente", creditorName: "Gemeente Amsterdam", amount: 650, originalAmount: 650, dueDate: "2026-06-01", stage: "factuur", notes: "Gemeentebelasting 2026", createdAt: "2026-04-01" },
-  { id: "d6", creditorType: "toeslagen", creditorName: "Belastingdienst/Toeslagen", amount: 1820, originalAmount: 1820, dueDate: "2026-05-25", stage: "herinnering", notes: "Zorgtoeslag terugvordering", createdAt: "2026-03-28" },
-  { id: "d7", creditorType: "huur", creditorName: "Ymere", amount: 430, originalAmount: 430, dueDate: "2026-05-01", stage: "incassobureau", notes: "Huurachterstand maart", createdAt: "2026-04-05" },
+  { id: "d1", creditorType: "belasting", creditorName: "Belastingdienst", amount: 2340, originalAmount: 2100, dueDate: "2026-05-10", stage: "action_needed", notes: "Inkomstenbelasting 2024", createdAt: "2026-01-15" },
+  { id: "d2", creditorType: "cjib", creditorName: "CJIB", amount: 490, originalAmount: 380, dueDate: "2026-05-03", stage: "action_needed", notes: "Verkeersboete A10", createdAt: "2026-02-20" },
+  { id: "d3", creditorType: "zorg", creditorName: "Zilveren Kruis", amount: 876, originalAmount: 876, dueDate: "2026-05-18", stage: "warning", notes: "Eigen risico 2025", createdAt: "2026-03-10" },
+  { id: "d4", creditorType: "energie", creditorName: "Vattenfall", amount: 1240, originalAmount: 980, dueDate: "2026-04-28", stage: "action_needed", notes: "Jaarafrekening gas/stroom", createdAt: "2025-11-05" },
+  { id: "d5", creditorType: "gemeente", creditorName: "Gemeente Amsterdam", amount: 650, originalAmount: 650, dueDate: "2026-06-01", stage: "stable", notes: "Gemeentebelasting 2026", createdAt: "2026-04-01" },
+  { id: "d6", creditorType: "toeslagen", creditorName: "Belastingdienst/Toeslagen", amount: 1820, originalAmount: 1820, dueDate: "2026-05-25", stage: "warning", notes: "Zorgtoeslag terugvordering", createdAt: "2026-03-28" },
+  { id: "d7", creditorType: "huur", creditorName: "Ymere", amount: 430, originalAmount: 430, dueDate: "2026-05-01", stage: "action_needed", notes: "Huurachterstand maart", createdAt: "2026-04-05" },
 ];
 
 const DEMO_INCOME = [
@@ -135,6 +133,22 @@ const DEMO_INCOME = [
 const fmt = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 const getCreditor = (id) => CREDITOR_TYPES.find(c => c.id === id) || CREDITOR_TYPES[12];
 const getStageData = (id) => STAGE_KEYS.find(s => s.id === id) || STAGE_KEYS[0];
+
+const IconHome = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
+  </svg>
+);
+const IconCamera = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+  </svg>
+);
+const IconMessage = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
 
 // ─── Main App ───
 export default function SchuldOverzicht() {
@@ -175,7 +189,7 @@ export default function SchuldOverzicht() {
         const timeStr = diff === 0 ? t("dueToday") : (diff > 1 ? t("dueInPlural").replace("{n}", diff) : t("dueIn").replace("{n}", diff));
         notifs.push({ type: "urgent", text: `${credLabel}: ${fmt(d.amount)} ${t("expires")} ${timeStr}`, debtId: d.id });
       }
-      if (d.stage === "incassobureau" || d.stage === "deurwaarder" || d.stage === "dagvaarding") {
+      if (d.stage === "action_needed") {
         const credLabel = t(getCreditor(d.creditorType).labelKey);
         const stageLabel = t(getStageData(d.stage).labelKey);
         notifs.push({ type: "escalation", text: `${credLabel} ${t("inPhase").replace("{stage}", stageLabel)}`, debtId: d.id });
@@ -190,6 +204,12 @@ export default function SchuldOverzicht() {
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
+
+  const tabs = [
+    { id: "dashboard", icon: <IconHome />,    lk: "overview" },
+    { id: "upload",    icon: <IconCamera />,  lk: "scan",    action: () => setShowAddDebt(true) },
+    { id: "calendar",  icon: <IconMessage />, lk: "advisor"  },
+  ];
 
   return (
     <LangContext.Provider value={{ lang, t, fmtDate }}>
@@ -220,9 +240,9 @@ export default function SchuldOverzicht() {
         {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => setShowAddDebt(false)} />}
         <button style={S.fab} onClick={() => setShowAddDebt(true)}><span style={{ fontSize: 28, lineHeight: 1 }}>+</span></button>
         <nav style={S.nav}>
-          {[{ id: "dashboard", icon: "◉", lk: "overview" }, { id: "upload", icon: "+", lk: "upload", action: () => setShowAddDebt(true) }, { id: "calendar", icon: "📅", lk: "calendar" }].map(tab => (
+          {tabs.map(tab => (
             <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
-              <span style={{ fontSize: 20 }}>{tab.icon}</span><span style={S.navLabel}>{t(tab.lk)}</span>
+              {tab.icon}<span style={S.navLabel}>{t(tab.lk)}</span>
             </button>
           ))}
         </nav>
@@ -234,8 +254,9 @@ export default function SchuldOverzicht() {
 // ─── Dashboard ───
 function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notifications, onViewDebt, onNavigate }) {
   const { t, fmtDate } = useLang();
-  const sortedDebts = [...debts].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-  const byStage = {}; debts.forEach(d => { if (!byStage[d.stage]) byStage[d.stage] = { count: 0, amount: 0 }; byStage[d.stage].count++; byStage[d.stage].amount += d.amount; });
+  const stagePriority = { action_needed: 0, warning: 1, stable: 2 };
+  const sortedDebts = [...debts].sort((a, b) => (stagePriority[a.stage] ?? 3) - (stagePriority[b.stage] ?? 3) || b.amount - a.amount);
+  const byStage = {}; debts.forEach(d => { byStage[d.stage] = (byStage[d.stage] || 0) + 1; });
 
   return (
     <div style={S.sc}>
@@ -252,8 +273,14 @@ function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notificati
       </div>
       <div style={S.card}>
         <div style={S.cardTitle}>{t("stageOverview")}</div>
-        <div style={S.stageBar}>{STAGE_KEYS.map(s => { const d = byStage[s.id]; if (!d) return null; return <div key={s.id} style={{ ...S.stageSeg, width: `${Math.max((d.amount / totalDebt) * 100, 8)}%`, backgroundColor: s.color }} />; })}</div>
-        <div style={S.stageLegend}>{STAGE_KEYS.map(s => { const d = byStage[s.id]; if (!d) return null; return (<div key={s.id} style={S.stageLI}><span style={{ ...S.stageDot, backgroundColor: s.color }} /><span style={S.stageLL}>{t(s.labelKey)}</span><span style={S.stageLV}>{d.count}× {fmt(d.amount)}</span></div>); })}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          {STAGE_KEYS.map(s => (
+            <div key={s.id} style={{ flex: 1, textAlign: "center", background: s.color + "18", borderRadius: 12, padding: "12px 8px" }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{byStage[s.id] || 0}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: s.color, marginTop: 2 }}>{t(s.labelKey)}</div>
+            </div>
+          ))}
+        </div>
       </div>
       {sortedDebts.map(d => { const c = getCreditor(d.creditorType); const s = getStageData(d.stage); const diff = Math.ceil((new Date(d.dueDate) - new Date()) / 864e5); return (
         <button key={d.id} style={S.debtCard} onClick={() => onViewDebt(d)}>
@@ -348,7 +375,7 @@ function AddDebtModal({ onAdd, onClose }) {
   const [amount, setAmount] = useState("");
   const [originalAmount, setOriginalAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [stage, setStage] = useState("factuur");
+  const [stage, setStage] = useState("stable");
   const [notes, setNotes] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const fileRef = useRef();
@@ -367,7 +394,7 @@ function AddDebtModal({ onAdd, onClose }) {
       }) });
       const data = await resp.json(); const text = data.content?.map(i => i.text || "").join("") || "";
       const p = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setCreditorType(p.creditorType || ""); setCreditorName(p.creditorName || ""); setAmount(p.amount ? String(p.amount) : ""); setOriginalAmount(p.amount ? String(p.amount) : ""); setDueDate(p.dueDate || ""); setStage(p.stage || "factuur"); setNotes(p.notes || "");
+      setCreditorType(p.creditorType || ""); setCreditorName(p.creditorName || ""); setAmount(p.amount ? String(p.amount) : ""); setOriginalAmount(p.amount ? String(p.amount) : ""); setDueDate(p.dueDate || ""); setStage(p.stage || "stable"); setNotes(p.notes || "");
     } catch (err) { console.error(err); alert(t("photoError")); }
     setAnalyzing(false);
   };
