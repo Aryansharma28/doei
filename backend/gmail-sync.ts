@@ -157,9 +157,9 @@ Return ONLY a valid JSON array. Each item must have:
 Only include emails that are clearly debt-related, overdue payment reminders, collection notices, BNPL reminders, rent/utilities arrears, government repayment notices, or fines.
 Exclude marketing, newsletters, payment confirmations for already-paid orders, and unrelated support emails.`,
     prompt: `Search Gmail for debt-related emails using the query "${query}". Review up to ${maxResults} recent results and return the JSON array only.`,
-    tools,
+    tools: tools as any,
     maxSteps: 5,
-  });
+  } as any);
 
   return parseSuggestions(text);
 }
