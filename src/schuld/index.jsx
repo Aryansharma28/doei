@@ -616,7 +616,7 @@ export default function SchuldOverzicht() {
         {/* ── Main content ── */}
         <main style={S.main}>
           {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} bankBalance={connections.bank?.balance ?? null} bankName={connections.bank?.name ?? null} />}
-          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} bankBalance={connections.bank?.balance ?? null} bankName={connections.bank?.name ?? null} onMarkPaid={markDebtPaid} />}
+          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} bankBalance={connections.bank?.balance ?? null} bankName={connections.bank?.name ?? null} onMarkPaid={markDebtPaid} onNavigate={setScreen} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
           {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} onConnectGmail={connectGmail} onSyncGmail={syncGmail} onDisconnectGmail={disconnectGmail} gmailBusy={gmailBusy} gmailMessage={gmailMessage} gmailError={gmailError} session={session} suggestedDebts={suggestedDebts} onAcceptSuggested={acceptSuggested} onDismissSuggested={dismissSuggested} />}
