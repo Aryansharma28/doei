@@ -11,6 +11,8 @@ node_modules/
 # tooling artifacts
 .playwright-mcp/
 *.png
+!image.png
+!image-*.png
 *.jpg
 *.jpeg
 .vercel
