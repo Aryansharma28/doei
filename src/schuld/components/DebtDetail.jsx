@@ -43,6 +43,7 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
   const monthlyIncome = income.reduce((sum, i) => sum + i.amount, 0);
 
   const [docs, setDocs] = useState([]);
+  const [docsLoaded, setDocsLoaded] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [actionContent, setActionContent] = useState(null);
@@ -52,9 +53,10 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
   const [showPayConfirm, setShowPayConfirm] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
 
-  useEffect(() => { loadDocs(); }, [debt.id]);
+  useEffect(() => { setDocsLoaded(false); loadDocs(); }, [debt.id]);
 
   useEffect(() => {
+    if (!docsLoaded) return;
     let cancelled = false;
     setActionLoading(true);
     setActionContent(null);
@@ -62,17 +64,18 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
     fetchAIText(
       `You advise people in the Netherlands dealing with debt. Respond in ${language}.
 
-Output 2-3 short action bullets (one per line, max 14 words each, in priority order). No bullet character — one action per line. Be specific: name the deadline, the contact, the consequence.
+Output 2-3 short action bullets (one per line, max 14 words each, in priority order). The FIRST line is the single most important next step — make it a concrete CTA: a phone number to call, a specific deadline, or a precise amount and date to pay. No bullet character — one action per line.
 
-Use the URGENCY SIGNALS in the context to set tone:
-- If "sommatie" / debt-collector / overdue / wage-garnishment risk → first action MUST be "Pay before X" or "Call them today" with the specific date or phone.
-- If extra costs are about to be added (e.g. 7-day deadline before fees), include a "Pay before X to avoid +€Y in costs" action.
-- Always include a fallback: "Bel ze en vraag een betalingsregeling" (or English equivalent) when the user might not be able to pay in full. Public creditors and most utilities are legally required to consider one.
-- For huur arrears, an action must mention preventing ontruiming.
-- For zorg achterstand near 6 months, mention avoiding CAK wanbetalersregeling.
+Read the LETTER CONTENT (if provided) carefully and extract any deadlines or thresholds the letter itself names (e.g. "binnen 7 dagen", "+ € 7,50 herinneringskosten", phone numbers). Quote the letter's own deadlines when present — don't make them up.
+
+Use the URGENCY SIGNALS to set tone:
+- If sommatie / debt-collector / overdue / wage-garnishment risk → first action MUST be "Pay before X" or "Call them today" with the specific date or phone.
+- If extra costs will be added on a deadline (e.g. 7-day window), include "Pay before X to avoid +€Y in costs" as an action.
+- Always include a fallback when the user might not be able to pay in full: "Bel ze en vraag een betalingsregeling" (or the English equivalent). Public creditors and most utilities legally must consider one.
+- For huur arrears mention preventing ontruiming. For zorg achterstand mention avoiding CAK wanbetalersregeling. For BKR-risico (ING) mention the credit-rating impact.
 
 Do NOT output one generic sentence. Do NOT downplay urgency when signals indicate sommatie or overdue.`,
-      buildDebtContext(debt, c, s, collectionFees, monthlyIncome),
+      buildDebtContext(debt, c, s, collectionFees, monthlyIncome, docs),
       { oneSentence: false }
     ).then(text => {
       if (!cancelled) { setActionContent(text); setActionLoading(false); }
@@ -80,9 +83,10 @@ Do NOT output one generic sentence. Do NOT downplay urgency when signals indicat
       if (!cancelled) { setActionContent(""); setActionLoading(false); }
     });
     return () => { cancelled = true; };
-  }, [debt.id, lang]);
+  }, [debt.id, lang, docs, docsLoaded]);
 
   useEffect(() => {
+    if (!docsLoaded) return;
     let cancelled = false;
     setSummaryLoading(true);
     setSummaryContent(null);
@@ -90,23 +94,27 @@ Do NOT output one generic sentence. Do NOT downplay urgency when signals indicat
     fetchAIText(
       `You advise people in the Netherlands dealing with debt. Respond in ${language}.
 
-One sentence, max 22 words: what this debt is AND how urgent it is. Lead with the urgency, then briefly say what it's for.
+Output exactly TWO short sentences, separated by a single newline. No headers, no bullets.
 
-Calibrate urgency from the URGENCY SIGNALS in the context:
-- "sommatie" / debt-collector / overdue / wage-garnishment risk → call this critical or last-warning. Do not soften.
-- Fees already added or escalated past first reminder → call this urgent.
-- Public creditor (Belastingdienst, CJIB, DUO, CAK) → mention the wage-garnishment power if relevant.
-- No urgency signals → keep it calm but informative.
+Sentence 1 — WHAT THIS IS: name the kind of letter (e.g. "Sommatie van incassobureau", "Eindafrekening energie", "Eerste aanmaning verkeersboete"), what creditor sent it, and what it's for. Be concrete; do not say "this is a debt".
+Sentence 2 — WHY IT MATTERS NOW: state the urgency in plain language (e.g. "Last warning before court", "Standard bill, no rush yet", "Will trigger CAK wanbetalersregeling at 6 months unpaid"). Reference the actual deadline or escalation step from the letter or signals.
 
-Never describe a sommatie or overdue debt as "manageable" or "no problem". Be honest.`,
-      buildDebtContext(debt, c, s, collectionFees, monthlyIncome)
+Calibrate from URGENCY SIGNALS and LETTER CONTENT:
+- sommatie / debt-collector / overdue / wage-garnishment risk → "critical" or "last warning". Do not soften.
+- Fees already added or past first reminder → "urgent".
+- Public creditor (Belastingdienst, CJIB, DUO, CAK) → mention wage-garnishment power if relevant.
+- Quiet utility/standard bill, no signals → keep it calm but specific.
+
+Never call a sommatie or overdue debt "manageable" or "no problem". Be honest and specific.`,
+      buildDebtContext(debt, c, s, collectionFees, monthlyIncome, docs),
+      { oneSentence: false }
     ).then(text => {
       if (!cancelled) { setSummaryContent(text); setSummaryLoading(false); }
     }).catch(() => {
       if (!cancelled) { setSummaryContent(""); setSummaryLoading(false); }
     });
     return () => { cancelled = true; };
-  }, [debt.id, lang]);
+  }, [debt.id, lang, docs, docsLoaded]);
 
   async function loadDocs() {
     const { data, error } = await supabase
@@ -115,6 +123,7 @@ Never describe a sommatie or overdue debt as "manageable" or "no problem". Be ho
       .eq("debt_id", debt.id)
       .order("uploaded_at", { ascending: false });
     if (!error && data) setDocs(data);
+    setDocsLoaded(true);
   }
 
   async function handleUpload(e) {
@@ -128,10 +137,32 @@ Never describe a sommatie or overdue debt as "manageable" or "no problem". Be ho
     const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
     if (upErr) { setUploadError(upErr.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
-    await supabase.from("documents").insert({ user_id: user.id, debt_id: debt.id, file_url: publicUrl, file_name: file.name, file_type: file.type });
+    const { data: insertedRow } = await supabase
+      .from("documents")
+      .insert({ user_id: user.id, debt_id: debt.id, file_url: publicUrl, file_name: file.name, file_type: file.type })
+      .select()
+      .single();
     await loadDocs();
     setUploading(false);
     e.target.value = "";
+
+    // Fire-and-forget: extract text from the letter so the AI summary/CTAs
+    // can quote actual deadlines and amounts from the document.
+    if (insertedRow?.id) {
+      fetch("/api/document/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileUrl: publicUrl, debtContext: `Creditor: ${debt.creditorName}, type: ${debt.creditorType}` }),
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(async (data) => {
+          if (data?.analysis) {
+            await supabase.from("documents").update({ extracted_text: data.analysis }).eq("id", insertedRow.id);
+            await loadDocs();
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   return (
@@ -193,28 +224,55 @@ Never describe a sommatie or overdue debt as "manageable" or "no problem". Be ho
         document.body
       )}
 
-      {/* AI Summary */}
+      {/* What this is */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiSummary")}</div>
-        {summaryLoading ? <LoadingDots /> : (
-          <div style={{ fontSize: 14, lineHeight: 1.65, color: "var(--text-primary)" }}>
-            {(summaryContent || "").split("\n").filter(l => l.trim()).map((line, i) => (
-              <p key={i} style={{ margin: i > 0 ? "8px 0 0" : 0 }}>{line}</p>
-            ))}
-          </div>
-        )}
+        {summaryLoading ? <LoadingDots /> : (() => {
+          const lines = (summaryContent || "").split("\n").map(l => l.trim()).filter(Boolean);
+          const what = lines[0] || "";
+          const why = lines.slice(1).join(" ");
+          return (
+            <div style={{ fontSize: 14, lineHeight: 1.65, color: "var(--text-primary)" }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>{what}</p>
+              {why && <p style={{ margin: "8px 0 0", color: "var(--text-secondary)" }}>{why}</p>}
+            </div>
+          );
+        })()}
       </div>
 
-      {/* AI Action Items */}
+      {/* What to do — primary CTA + supporting actions */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiActionItems")}</div>
-        {actionLoading ? <LoadingDots /> : (
-          <div style={{ fontSize: 14, lineHeight: 1.65, color: "var(--text-primary)" }}>
-            {(actionContent || "").split("\n").filter(l => l.trim()).map((line, i, arr) => (
-              <div key={i} style={{ marginBottom: i < arr.length - 1 ? 10 : 0 }}>{line}</div>
-            ))}
-          </div>
-        )}
+        {actionLoading ? <LoadingDots /> : (() => {
+          const items = (actionContent || "").split("\n").map(l => l.replace(/^[-•\d.\s]+/, "").trim()).filter(Boolean);
+          const primary = items[0];
+          const rest = items.slice(1);
+          return (
+            <div>
+              {primary && (
+                <div style={{
+                  background: "var(--action-bg, #FFF1EE)",
+                  borderLeft: "3px solid var(--action-fg, #C8102E)",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "var(--text-primary)",
+                  lineHeight: 1.45,
+                }}>
+                  {primary}
+                </div>
+              )}
+              {rest.length > 0 && (
+                <ul style={{ margin: "12px 0 0", paddingLeft: 18, fontSize: 14, lineHeight: 1.6, color: "var(--text-primary)" }}>
+                  {rest.map((line, i) => (
+                    <li key={i} style={{ marginBottom: i < rest.length - 1 ? 6 : 0 }}>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Financial breakdown */}
@@ -353,14 +411,16 @@ function IDealLogo() {
   );
 }
 
-function buildDebtContext(debt, c, s, collectionFees, monthlyIncome) {
+function buildDebtContext(debt, c, s, collectionFees, monthlyIncome, docs = []) {
   const notes = (debt.notes || "").toLowerCase();
+  const docTexts = (docs || []).map(d => d.extracted_text).filter(Boolean).join("\n").toLowerCase();
+  const haystack = `${notes}\n${docTexts}`;
   const signals = [];
 
-  if (c.id === "incasso" || /sommatie|deurwaarder|incassobureau/.test(notes)) {
+  if (c.id === "incasso" || /sommatie|deurwaarder|incassobureau/.test(haystack)) {
     signals.push("CRITICAL: At debt-collector / sommatie stage. Next escalation is dagvaarding (court summons) and possible loon- or bankbeslag.");
   }
-  if (/aanmaning|verhoogd|achterstand|laatste/.test(notes)) {
+  if (/aanmaning|verhoogd|achterstand|laatste/.test(haystack)) {
     signals.push("Already past first reminder — has been escalated at least once.");
   }
   if (collectionFees > 0) {
@@ -378,11 +438,13 @@ function buildDebtContext(debt, c, s, collectionFees, monthlyIncome) {
   if (c.id === "huur") {
     signals.push("Rent arrears — landlord can start ontbinding/eviction procedure if it grows.");
   }
-  if (c.id === "zorg" && /zorgpremie|premie/.test(notes)) {
+  if (c.id === "zorg" && /zorgpremie|premie/.test(haystack)) {
     signals.push("Zorgpremie achterstand — at 6 months unpaid you are auto-enrolled in CAK wanbetalersregeling (~€161/month penalty premium).");
   }
 
-  return [
+  const today = new Date().toISOString().slice(0, 10);
+  const lines = [
+    `Today: ${today}`,
     `Creditor: ${debt.creditorName} (${c.type}, id: ${c.id})`,
     `Outstanding: €${debt.amount}`,
     `Original: €${debt.originalAmount}`,
@@ -395,5 +457,17 @@ function buildDebtContext(debt, c, s, collectionFees, monthlyIncome) {
     signals.length
       ? "URGENCY SIGNALS:\n" + signals.map(line => `- ${line}`).join("\n")
       : "URGENCY SIGNALS: none detected — this debt is in a manageable state.",
-  ].join("\n");
+  ];
+
+  const letters = (docs || []).map(d => d.extracted_text).filter(Boolean);
+  if (letters.length) {
+    lines.push("");
+    lines.push("LETTER CONTENT (extracted from the attached document — quote deadlines and amounts from this if relevant):");
+    letters.forEach((t, i) => {
+      lines.push(`--- letter ${i + 1} ---`);
+      lines.push(t);
+    });
+  }
+
+  return lines.join("\n");
 }
