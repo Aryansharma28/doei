@@ -13,3 +13,11 @@ node_modules/
 *.png
 *.jpg
 *.jpeg
+.vercel
+
+# voice agent
+voice-agent/.venv/
+voice-agent/__pycache__/
+
+# claude internal
+.claude/scheduled_tasks.lock

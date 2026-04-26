@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:backend": "node --import tsx/esm backend/server.ts",
+    "dev:voice-agent": "cd voice-agent && python3 agent.py dev",
     "test:advisor": "vitest run backend/tests/advisor.test.ts",
     "build": "vite build",
     "preview": "vite preview",
@@ -19,6 +20,8 @@
     "@cablate/mcp-gmail": "^0.0.1",
     "@mastra/mcp": "^1.5.2",
     "@supabase/supabase-js": "^2.104.1",
+    "livekit-client": "^2.5.0",
+    "livekit-server-sdk": "^2.7.0",
     "ai": "^6.0.168",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
