@@ -220,7 +220,7 @@ function PayButton({ debt, creditor, lang, t }) {
         style={payBtnStyle}
       >
         <IDealLogo />
-        <span style={{ flex: 1 }}>{lang === "nl" ? `Betaal ${fmt(debt.amount)} via iDEAL` : `Pay ${fmt(debt.amount)} via iDEAL`}</span>
+        <span style={{ flex: 1 }}>{lang === "nl" ? `Betaal ${fmt(debt.amount)} via iDEAL` : `Pay ${fmt(debt.amount)} with iDEAL`}</span>
         <span style={{ fontSize: 16 }}>↗</span>
       </a>
     );
@@ -231,8 +231,8 @@ function PayButton({ debt, creditor, lang, t }) {
       <span style={{ fontSize: 18 }}>🏦</span>
       <span style={{ flex: 1, fontSize: 13 }}>
         {lang === "nl"
-          ? "Betaal via uw bank of neem contact op met de schuldeiser"
-          : "Pay via your bank or contact the creditor directly"}
+          ? "Betaal via je bank of neem contact op met de schuldeiser"
+          : "Pay through your bank or get in touch with them directly"}
       </span>
     </div>
   );

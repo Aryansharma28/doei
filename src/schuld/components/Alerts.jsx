@@ -14,7 +14,7 @@ export function Alerts({ notifications, onViewDebt }) {
         : <>
             {urgent.length > 0 && (
               <>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.8, margin: "16px 0 8px" }}>Due soon</p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.8, margin: "16px 0 8px" }}>Coming up</p>
                 {urgent.map((n, i) => (
                   <button key={i} style={S.alertCard} className="card-lift" onClick={() => n.debtId && onViewDebt(n.debtId)}>
                     <span style={{ fontSize: 20 }}>⏰</span>
@@ -26,7 +26,7 @@ export function Alerts({ notifications, onViewDebt }) {
             )}
             {escalations.length > 0 && (
               <>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.8, margin: "16px 0 8px" }}>Escalations</p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.8, margin: "16px 0 8px" }}>Needs attention</p>
                 {escalations.map((n, i) => (
                   <button key={i} style={S.alertCard} className="card-lift" onClick={() => n.debtId && onViewDebt(n.debtId)}>
                     <span style={{ fontSize: 20 }}>⚠️</span>
@@ -38,8 +38,8 @@ export function Alerts({ notifications, onViewDebt }) {
             )}
             <div style={{ marginTop: "auto", paddingTop: 32, textAlign: "center" }}>
               <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                Tap any alert to view the debt and take action.<br />
-                Alerts clear automatically when resolved.
+                Tap one to see the debt and what you can do.<br />
+                Alerts go away once they're sorted.
               </p>
             </div>
           </>
