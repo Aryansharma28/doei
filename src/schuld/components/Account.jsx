@@ -231,7 +231,7 @@ export function Account({
       {/* ── Sign out ── */}
       <button
         onClick={() => supabase.auth.signOut()}
-        style={{ width: "100%", height: 46, background: "none", border: "1px solid var(--paper-2)", borderRadius: 14, fontSize: 14, color: "var(--ink-2)", cursor: "pointer", marginTop: 4 }}
+        style={{ width: "100%", height: 46, background: "none", border: "1px solid #ff3b30", borderRadius: 14, fontSize: 14, color: "#ff3b30", cursor: "pointer", marginTop: 4 }}
       >
         Sign out
       </button>
