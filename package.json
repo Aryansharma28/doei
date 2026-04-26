@@ -16,6 +16,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
     "@anthropic-ai/sdk": "^0.52.0",
+    "@cablate/mcp-gmail": "^0.0.1",
     "@mastra/mcp": "^1.5.2",
     "@supabase/supabase-js": "^2.104.1",
     "ai": "^6.0.168",
@@ -35,6 +36,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
+    "vercel": "^52.0.0",
     "vite": "^5.0.8",
     "vitest": "^4.1.5"
   }

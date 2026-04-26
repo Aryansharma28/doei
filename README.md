@@ -1,46 +1,85 @@
 # doei
 
-A mobile-first debt management app for people dealing with debt collection in the Netherlands. The name "doei" (Dutch for "bye") reflects the goal: get out of debt and say goodbye to it.
+**👉 Best experience: open on your phone → [doei.vercel.app](https://doei.vercel.app/app)**
 
-## What we're building
+> Dutch for "bye" — as in, bye debt.
 
-A simple, friendly tool that helps users:
+**Problem:** People in debt in the Netherlands have no single place to track what they owe, to whom, and what happens next. Letters pile up, deadlines get missed, debts escalate to bailiffs.
 
-- **Track all their debts** — creditor, amount, due date, status, and escalation stage
-- **Upload documents** — scan letters or take photos of debt collection notices directly from your phone
-- **Get AI-powered advice** — a built-in financial advisor (powered by Claude) that understands your full debt situation and gives personalised guidance in Dutch or English
-- **Stay on top of deadlines** — alerts for upcoming due dates and escalating debts
-- **Log creditor communications** — keep a mail/letter history per debt
+**What doei does:** Connect your bank → Claude scans 90 days of transactions and auto-detects debts → you confirm them → the app tracks amounts, due dates, and escalation stages. Built-in AI advisor (Claude) answers questions about your specific situation in Dutch or English.
+
+---
+
+## Features
+
+- **Magic link auth** — email sign-in, no password, per-user data with Supabase RLS
+- **Bank scan** — PSD2 open banking (GoCardless/TrueLayer) fetches transactions; Claude identifies debt repayments and surfaces them as suggestions the user confirms
+- **Document scan** — photograph a debt letter; Claude extracts creditor, amount, due date
+- **AI advisor** — Claude chat with full context of your debts + income
+- **Alerts** — upcoming due dates, escalating debts
+- **Dutch + English** — full i18n
 
 ## Stack
 
-| Layer | Tech |
-|---|---|
-| Frontend | React 18 + React Router v7 + Vite |
-| Backend / DB | Supabase (PostgreSQL + Storage) |
-| AI advisor | Anthropic Claude (claude-sonnet) |
-| AI observability | LangWatch |
-| i18n | Dutch + English |
+React 18 + Vite · Supabase (auth + PostgreSQL + RLS) · Anthropic Claude · GoCardless Bank Account Data (PSD2) · Vercel (frontend + serverless API routes)
 
-## Getting started
+## Run it
 
 ```bash
 npm install
-npm run dev
+npm run dev        # frontend on :5173 — auth + UI works immediately
+npx vercel dev     # frontend + API routes — needed for real bank sync
 ```
 
-Set the following environment variables (create a `.env` file):
+The mock bank flow works with just `npm run dev` — no credentials needed. Go to Account tab → Connect bank → pick a bank → simulated scan → suggested debts appear.
 
+## Env vars
+
+```env
+ANTHROPIC_API_KEY=
+
+# Supabase server-side (for API routes)
+SUPABASE_SERVICE_ROLE_KEY=     # Supabase dashboard → Settings → API → service_role
+
+# GoCardless Bank Account Data — bankaccountdata.gocardless.com (free tier, NL banks)
+GOCARDLESS_SECRET_ID=
+GOCARDLESS_SECRET_KEY=
+
+APP_URL=http://localhost:5173  # your Vercel URL in prod
 ```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-VITE_ANTHROPIC_API_KEY=
-VITE_LANGWATCH_API_KEY=
-```
 
-## Key features
+## API routes
 
-- **Camera capture on mobile** — tap "Foto nemen" inside a debt to open your camera and photograph a letter directly
-- **Debt escalation tracking** — debts move through stages (aanmaning → incasso → deurwaarder → rechtbank) with visual indicators
-- **AI advisor** — chat with a Claude-powered assistant that knows your debts, income, and situation
-- **Responsive** — works on phone and desktop; bottom nav on mobile, sidebar on desktop
+| Route | Purpose |
+|---|---|
+| `POST /api/advisor` | Claude advisor chat |
+| `POST /api/document/analyze` | Extract debt fields from scanned image |
+| `POST /api/gocardless/connect` | Start PSD2 OAuth → returns bank redirect URL |
+| `POST /api/gocardless/sync` | Fetch transactions + Claude debt detection |
+| `POST /api/gocardless/mock-connect` | Dev mock — no credentials needed |
+
+## Supabase tables
+
+| Table | Purpose |
+|---|---|
+| `bank_connections` | GoCardless requisition + account IDs, per user |
+| `suggested_debts` | Claude-detected debts awaiting user confirmation |
+
+RLS enabled on both — users only touch their own rows.
+
+## How the bank scan works
+
+1. User picks their bank (ING, ABN AMRO, Rabobank, Bunq, etc.)
+2. `/api/gocardless/connect` creates a PSD2 requisition and returns an OAuth URL
+3. User authenticates directly with their bank — no credentials touch our server
+4. Bank redirects back to `/app?bank_ref=<id>`
+5. `/api/gocardless/sync` fetches 90 days of transactions and sends them to Claude
+6. Claude returns structured debt objects (creditor, type, amount, date)
+7. App shows suggestions — user confirms or dismisses each one
+
+## Codebase notes
+
+- No component library — styles live in `src/schuld/styles/styles.js` (JS object) + CSS custom properties in `src/schuld/utils/helpers.js`
+- Design tokens: `--paper-0/1/2/3`, `--ink-0/1/2/3`, `--accent`, `--stable/warning/action-fg/bg/tint`
+- Debts currently stored in localStorage (per user ID) — migrating to Supabase is the obvious next step
+- To deploy: fill env vars → `vercel deploy`

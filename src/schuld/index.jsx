@@ -5,6 +5,7 @@ import { DebtDetail } from "./components/DebtDetail";
 import { Advisor } from "./components/Advisor";
 import { Alerts } from "./components/Alerts";
 import { Account } from "./components/Account";
+import { Auth } from "./components/Auth";
 import { AddDebtModal } from "./components/AddDebtModal";
 import { S } from "./styles/styles";
 import { globalCSS, storage, fmt } from "./utils/helpers";
@@ -64,6 +65,7 @@ const FlagNL = ({ size = 22 }) => (
 );
 
 export default function SchuldOverzicht() {
+  const [session, setSession] = useState(undefined); // undefined = loading, null = logged out
   const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("dashboard");
   const [debts, setDebts] = useState(DEMO_DEBTS);
@@ -77,7 +79,31 @@ export default function SchuldOverzicht() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
   const [connections, setConnections] = useState({});
+  const [suggestedDebts, setSuggestedDebts] = useState([]);
   const scanRef = useRef();
+
+  // Auth
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Bank callback — GoCardless redirects back with ?bank_ref=<requisition_id>
+  useEffect(() => {
+    if (!session) return;
+    const params = new URLSearchParams(window.location.search);
+    const bankRef = params.get("bank_ref");
+    if (!bankRef) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch("/api/gocardless/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requisition_id: bankRef, user_id: session.user.id }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.suggested?.length) setSuggestedDebts(d.suggested); setScreen("account"); });
+  }, [session]);
 
   useLayoutEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -143,6 +169,8 @@ export default function SchuldOverzicht() {
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
   const connectIntegration = (id, data) => setConnections(prev => ({ ...prev, [id]: data }));
   const disconnectIntegration = (id) => setConnections(prev => { const n = { ...prev }; delete n[id]; return n; });
+  const acceptSuggested = (s) => { addDebt({ creditorName: s.creditor_name, creditorType: s.creditor_type, amount: s.amount, originalAmount: s.amount, dueDate: s.transaction_date, stage: "warning", notes: s.description }); setSuggestedDebts(prev => prev.filter(x => x !== s)); };
+  const dismissSuggested = (s) => setSuggestedDebts(prev => prev.filter(x => x !== s));
 
   const handleScan = async (e) => {
     const file = e.target.files?.[0];
@@ -162,6 +190,29 @@ export default function SchuldOverzicht() {
     { id: "calendar",  icon: "sparkle", lk: "advisor"  },
     { id: "account",   icon: "user",    lk: "account"  },
   ];
+
+  // Loading
+  if (session === undefined) {
+    return (
+      <>
+        <style>{globalCSS}</style>
+        <div style={{ minHeight: "100vh", background: "var(--paper-0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 28, height: 28, border: "2.5px solid var(--paper-2)", borderTopColor: "var(--accent)", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </>
+    );
+  }
+
+  // Not logged in
+  if (!session) {
+    return (
+      <>
+        <style>{globalCSS}</style>
+        <Auth />
+      </>
+    );
+  }
 
   return (
     <LangContext.Provider value={{ lang, t, fmtDate }}>
@@ -206,7 +257,7 @@ export default function SchuldOverzicht() {
           {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
-          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} />}
+          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} session={session} suggestedDebts={suggestedDebts} onAcceptSuggested={acceptSuggested} onDismissSuggested={dismissSuggested} onSuggest={setSuggestedDebts} />}
         </main>
 
         <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />
@@ -218,8 +269,7 @@ export default function SchuldOverzicht() {
             const active = screen === tab.id;
             return (
               <button key={tab.id} style={{ ...S.navBtn, ...(active ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
-                <Icon name={tab.icon} size={17} />
-                {active && <span>{t(tab.lk)}</span>}
+                <Icon name={tab.icon} size={19} />
               </button>
             );
           })}

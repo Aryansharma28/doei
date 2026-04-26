@@ -5,6 +5,66 @@ import { getCreditor, getStageData } from "../constants/creditors";
 import { fmt } from "../utils/helpers";
 import { createTrace } from "../../lib/langwatch";
 
+// Parse AI response into text segments and [PAY:...] action cards
+function parseMessage(content) {
+  const parts = content.split(/(\[PAY:[^\]]+\])/g);
+  return parts.map(part => {
+    const m = part.match(/^\[PAY:([^:]+):([^:]+):([^\]]+)\]$/);
+    if (m) return { type: "pay", creditorId: m[1], amount: parseFloat(m[2]), label: m[3] };
+    return { type: "text", content: part };
+  }).filter(p => p.type === "pay" || p.content?.trim());
+}
+
+function PayActionCard({ creditorId, amount, label, lang }) {
+  const creditor = getCreditor(creditorId);
+  const url = creditor?.paymentUrl;
+  const displayAmt = fmt(amount);
+
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" style={actionCardStyle}>
+        <IDealLogo />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{label}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 }}>
+            {lang === "nl" ? `Betaal ${displayAmt} via iDEAL` : `Pay ${displayAmt} via iDEAL`}
+          </div>
+        </div>
+        <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>↗</span>
+      </a>
+    );
+  }
+
+  return (
+    <div style={{ ...actionCardStyle, background: "var(--tag-bg)", border: "1px solid var(--card-border)", cursor: "default" }}>
+      <span style={{ fontSize: 18 }}>🏦</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{label}</div>
+        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 1 }}>
+          {displayAmt} — {lang === "nl" ? "betaal via uw bank" : "pay via your bank"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IDealLogo() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
+      <rect width="32" height="32" rx="6" fill="white" />
+      <text x="4" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#003082">iD</text>
+      <rect x="19" y="6" width="9" height="20" rx="2" fill="#CC0000" />
+    </svg>
+  );
+}
+
+const actionCardStyle = {
+  display: "flex", alignItems: "center", gap: 10,
+  background: "#003082", borderRadius: 12, padding: "12px 14px",
+  margin: "8px 0 4px", textDecoration: "none", border: "none",
+  width: "100%", boxSizing: "border-box", cursor: "pointer",
+};
+
 export function Advisor({ debts, income }) {
   const { t, lang } = useLang();
   const [messages, setMessages] = useState([]);
@@ -18,36 +78,56 @@ export function Advisor({ debts, income }) {
   const buildSystemPrompt = () => {
     const totalDebt = debts.reduce((s, d) => s + d.amount, 0);
     const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
-    const debtSummary = debts.map(d => {
+    const debtList = debts.map(d => {
       const c = getCreditor(d.creditorType);
-      const s = getStageData(d.stage);
-      return `- ${d.creditorName} (${c.type}): €${d.amount} (original: €${d.originalAmount}), stage: ${s.id}, due: ${d.dueDate}, channel: ${c.channel}, notes: ${d.notes}`;
+      const st = getStageData(d.stage);
+      return `- id:${d.creditorType} | ${d.creditorName} (${c.type}): €${d.amount} owed (original €${d.originalAmount}), stage: ${st.id}, due: ${d.dueDate}, notes: ${d.notes || "none"}`;
     }).join("\n");
-    const incomeSummary = income.map(i => `- ${i.label}: €${i.amount}/month (day ${i.day})`).join("\n");
+    const incomeList = income.map(i => `- ${i.label}: €${i.amount}/month (paid day ${i.day})`).join("\n");
 
-    return `You are a friendly financial helper for someone in the Netherlands dealing with debt. You speak ${lang === "nl" ? "Dutch" : "English"}.
+    return `You are a financial wellbeing assistant for someone in the Netherlands dealing with debt. Respond in ${lang === "nl" ? "Dutch" : "English"}.
 
-You know their exact situation:
+This person is likely stressed. Be warm, honest, and human — like a knowledgeable friend, not a formal advisor.
 
+THEIR SITUATION:
 Total debt: €${totalDebt.toFixed(0)} across ${debts.length} debts. Monthly income: €${monthlyIncome.toFixed(0)}.
 
-Their debts:
-${debtSummary}
+Debts (use these exact creditor IDs in PAY tags):
+${debtList}
 
-Their income:
-${incomeSummary}
+Income:
+${incomeList}
 
-HOW TO RESPOND — THIS IS CRITICAL:
-- Write like you're texting a friend. Short sentences. Simple words. No jargon.
-- NEVER use markdown formatting. No **bold**, no headers, no ---, no bullet points, no numbered lists.
-- Just write plain paragraphs. Keep them short — 2-3 sentences each.
-- Use line breaks between paragraphs for readability.
-- Talk about their actual debts by name and amount. Be specific.
-- Total response should be 6-10 sentences max. This is a phone screen, not a document.
-- Be warm and encouraging. No doom. These people are stressed already.
-- When relevant, mention that their gemeente can help with free debt counseling (schuldhulpverlening).
-- You know Dutch debt law (betalingsregeling, beslagvrije voet, vroegsignalering) but explain it in plain language, never use the Dutch legal terms without explaining what they mean.
-- End with one simple question to keep the conversation going.`;
+ACCURACY — NEVER BREAK THESE RULES:
+- Only reference amounts, creditor names, and dates from the data above. Never invent or estimate figures.
+- If you don't know something, say "I'm not sure" — never guess.
+- Don't promise outcomes you can't guarantee (e.g. "they will definitely accept a payment plan").
+- Dutch law references must be general and accurate. Don't cite specific article numbers.
+
+TONE & FORMAT:
+- Plain text only. No markdown, no bold, no bullet points, no numbered lists, no headers.
+- Short paragraphs, 2-3 sentences each. Max 5-6 sentences total per response.
+- Be warm and specific — use their actual creditor names and amounts.
+- No doom. Acknowledge that debt is hard, then focus on what they CAN do.
+- End with one short question to keep the conversation going.
+
+DUTCH CONTEXT (explain in plain language, never use raw legal terms):
+- Belastingdienst, CJIB, DUO, CAK have the strongest legal powers — they can garnish wages.
+- Rent arrears risk eviction — always treat as urgent.
+- All public creditors must offer a payment arrangement (betalingsregeling) if asked — always worth calling.
+- Free municipal debt counseling is available (schuldhulpverlening via their gemeente) — mention when situation feels overwhelming.
+- There is a protected minimum income that cannot be seized by law — reassuring to mention if they're scared of garnishment.
+
+PAYMENT ACTION CARDS:
+When you recommend paying a specific debt right now, include a payment tag on its own line (no surrounding text on that line):
+[PAY:creditorId:amount:Short label]
+
+Use the exact creditor id from the debt list (e.g. cjib, belasting, huur). Only include PAY tags when it is genuinely the right immediate action. Never include more than 3 PAY tags in one response.
+
+Example:
+Contact the CJIB today to avoid your fine escalating further.
+
+[PAY:cjib:490:CJIB – Verkeersboete]`;
   };
 
   const sendMessage = async (text) => {
@@ -73,16 +153,11 @@ HOW TO RESPOND — THIS IS CRITICAL:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ systemPrompt, messages: apiMessages }),
       });
+      if (!response.ok) throw new Error("API error");
       const data = await response.json();
-      const reply = data.reply || "Sorry, I couldn't process that. Please try again.";
+      const reply = data.reply || (lang === "nl" ? "Sorry, probeer het opnieuw." : "Sorry, couldn't process that. Please try again.");
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-      await span.end({
-        model: "claude-sonnet-4-6",
-        systemPrompt,
-        messages: apiMessages,
-        output: reply,
-        usage: {},
-      });
+      await span.end({ model: "claude-sonnet-4-6", systemPrompt, messages: apiMessages, output: reply, usage: {} });
     } catch (err) {
       console.error("Advisor error:", err);
       await span.end({ model: "claude-sonnet-4-6", messages: newMessages, output: null, error: err });
@@ -108,8 +183,8 @@ HOW TO RESPOND — THIS IS CRITICAL:
           <div style={S.chipsWrap}>
             <div style={S.welcomeMsg}>
               {lang === "nl"
-                ? "Hallo! Ik ken uw volledige schuldsituatie. Stel me een vraag of kies een onderwerp hieronder."
-                : "Hello! I know your full debt situation. Ask me a question or pick a topic below."}
+                ? "Hallo! Ik ken uw volledige schuldsituatie. Stel me een vraag of kies een onderwerp."
+                : "Hello! I know your full debt situation. Ask me anything or pick a topic below."}
             </div>
             <div style={S.chipsRow}>
               {chips.map((chip, i) => (
@@ -123,9 +198,18 @@ HOW TO RESPOND — THIS IS CRITICAL:
           <div key={i} style={msg.role === "user" ? S.msgUser : S.msgBot}>
             {msg.role === "assistant" && <div style={S.msgBotAvatar}>◉</div>}
             <div style={msg.role === "user" ? S.msgBubbleUser : S.msgBubbleBot}>
-              {msg.content.split("\n").map((line, j) => (
-                <p key={j} style={{ margin: line ? "0 0 8px 0" : "0", lineHeight: 1.5 }}>{line}</p>
-              ))}
+              {msg.role === "assistant"
+                ? parseMessage(msg.content).map((part, j) =>
+                    part.type === "pay"
+                      ? <PayActionCard key={j} {...part} lang={lang} />
+                      : part.content.split("\n").map((line, k) => (
+                          <p key={`${j}-${k}`} style={{ margin: line.trim() ? "0 0 8px 0" : "0", lineHeight: 1.5 }}>{line}</p>
+                        ))
+                  )
+                : msg.content.split("\n").map((line, j) => (
+                    <p key={j} style={{ margin: line ? "0 0 8px 0" : "0", lineHeight: 1.5 }}>{line}</p>
+                  ))
+              }
             </div>
           </div>
         ))}
