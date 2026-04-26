@@ -298,18 +298,17 @@ export default function SchuldOverzicht() {
     setGmailError("");
     setGmailMessage("");
 
-    const { error } = await supabase.auth.linkIdentity({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/app?gmail=callback`,
-        scopes: "openid email profile https://www.googleapis.com/auth/gmail.readonly",
-        queryParams: {
-          access_type: "offline",
-          include_granted_scopes: "true",
-          prompt: "consent",
-        },
+    const oauthOptions = {
+      redirectTo: `${window.location.origin}/app?gmail=callback`,
+      scopes: "openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.events",
+      queryParams: {
+        access_type: "offline",
+        include_granted_scopes: "true",
+        prompt: "consent",
       },
-    });
+    };
+
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: oauthOptions });
 
     if (error) {
       setGmailBusy(false);
