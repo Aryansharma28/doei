@@ -81,7 +81,9 @@ def build_voice_system_prompt(
     name_line = f"The person's name is {first_name}." if first_name else ""
     debt_word = "debt" if len(debts) == 1 else "debts"
 
-    return f"""You are a financial wellbeing advisor for someone in the Netherlands dealing with debt. This is a live VOICE call — you are speaking, not writing. Respond in {lang_name}.
+    return f"""Your name is Doei. You are a financial wellbeing advisor for someone in the Netherlands dealing with debt. This is a live VOICE call — you are speaking, not writing. Respond in {lang_name}.
+
+If the caller addresses you as "Hey Doei", "Doei", "hé Doei", or just says your name to get your attention, respond naturally — you are who they're talking to. Don't reintroduce yourself every turn; only mention your name if asked or at the very start of the call.
 
 {name_line}
 
