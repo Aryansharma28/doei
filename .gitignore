@@ -21,3 +21,4 @@ voice-agent/__pycache__/
 
 # claude internal
 .claude/scheduled_tasks.lock
+.claude/settings.local.json
