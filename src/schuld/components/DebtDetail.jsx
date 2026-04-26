@@ -8,7 +8,7 @@ import { supabase } from "../../lib/supabase";
 
 const FAST_MODEL = "claude-haiku-4-5";
 
-async function fetchAIText(systemPrompt, userContent) {
+async function fetchAIText(systemPrompt, userContent, { oneSentence = true } = {}) {
   const response = await fetch("/api/advisor", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -21,7 +21,7 @@ async function fetchAIText(systemPrompt, userContent) {
   if (!response.ok) return "";
   const data = await response.json();
   const text = data.reply || "";
-  // Hard-cap: take only the first sentence
+  if (!oneSentence) return text;
   return text.split(/(?<=[.!?])\s/)[0] || text;
 }
 
@@ -59,12 +59,21 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
     setActionLoading(true);
     setActionContent(null);
     const language = lang === "nl" ? "Dutch" : "English";
-    const incomeSummary = income.length > 0
-      ? income.map(i => `${i.label}: €${i.amount}/month`).join(", ")
-      : "unknown";
     fetchAIText(
-      `Respond in ${language}. One sentence, max 15 words: the single most important action for this debt right now. Be specific.`,
-      buildDebtContext(debt, c, s, collectionFees, monthlyIncome)
+      `You advise people in the Netherlands dealing with debt. Respond in ${language}.
+
+Output 2-3 short action bullets (one per line, max 14 words each, in priority order). No bullet character — one action per line. Be specific: name the deadline, the contact, the consequence.
+
+Use the URGENCY SIGNALS in the context to set tone:
+- If "sommatie" / debt-collector / overdue / wage-garnishment risk → first action MUST be "Pay before X" or "Call them today" with the specific date or phone.
+- If extra costs are about to be added (e.g. 7-day deadline before fees), include a "Pay before X to avoid +€Y in costs" action.
+- Always include a fallback: "Bel ze en vraag een betalingsregeling" (or English equivalent) when the user might not be able to pay in full. Public creditors and most utilities are legally required to consider one.
+- For huur arrears, an action must mention preventing ontruiming.
+- For zorg achterstand near 6 months, mention avoiding CAK wanbetalersregeling.
+
+Do NOT output one generic sentence. Do NOT downplay urgency when signals indicate sommatie or overdue.`,
+      buildDebtContext(debt, c, s, collectionFees, monthlyIncome),
+      { oneSentence: false }
     ).then(text => {
       if (!cancelled) { setActionContent(text); setActionLoading(false); }
     }).catch(() => {
@@ -79,7 +88,17 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
     setSummaryContent(null);
     const language = lang === "nl" ? "Dutch" : "English";
     fetchAIText(
-      `Respond in ${language}. One sentence, max 15 words: what this debt is and how urgent it is.`,
+      `You advise people in the Netherlands dealing with debt. Respond in ${language}.
+
+One sentence, max 22 words: what this debt is AND how urgent it is. Lead with the urgency, then briefly say what it's for.
+
+Calibrate urgency from the URGENCY SIGNALS in the context:
+- "sommatie" / debt-collector / overdue / wage-garnishment risk → call this critical or last-warning. Do not soften.
+- Fees already added or escalated past first reminder → call this urgent.
+- Public creditor (Belastingdienst, CJIB, DUO, CAK) → mention the wage-garnishment power if relevant.
+- No urgency signals → keep it calm but informative.
+
+Never describe a sommatie or overdue debt as "manageable" or "no problem". Be honest.`,
       buildDebtContext(debt, c, s, collectionFees, monthlyIncome)
     ).then(text => {
       if (!cancelled) { setSummaryContent(text); setSummaryLoading(false); }
@@ -335,8 +354,36 @@ function IDealLogo() {
 }
 
 function buildDebtContext(debt, c, s, collectionFees, monthlyIncome) {
+  const notes = (debt.notes || "").toLowerCase();
+  const signals = [];
+
+  if (c.id === "incasso" || /sommatie|deurwaarder|incassobureau/.test(notes)) {
+    signals.push("CRITICAL: At debt-collector / sommatie stage. Next escalation is dagvaarding (court summons) and possible loon- or bankbeslag.");
+  }
+  if (/aanmaning|verhoogd|achterstand|laatste/.test(notes)) {
+    signals.push("Already past first reminder — has been escalated at least once.");
+  }
+  if (collectionFees > 0) {
+    signals.push(`€${collectionFees.toFixed(2)} in extra fees already added on top of the original €${debt.originalAmount}.`);
+  }
+  if (debt.dueDate) {
+    const daysUntilDue = Math.ceil((new Date(debt.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+    if (daysUntilDue < 0) signals.push(`Already ${Math.abs(daysUntilDue)} day(s) OVERDUE.`);
+    else if (daysUntilDue <= 3) signals.push(`Due in ${daysUntilDue} day(s) — payment window is closing.`);
+    else if (daysUntilDue <= 7) signals.push(`Due in ${daysUntilDue} days — must be arranged this week.`);
+  }
+  if (["belasting", "cjib", "duo", "cak", "toeslagen"].includes(c.id)) {
+    signals.push("Public creditor — has legal authority to garnish wages without going to court.");
+  }
+  if (c.id === "huur") {
+    signals.push("Rent arrears — landlord can start ontbinding/eviction procedure if it grows.");
+  }
+  if (c.id === "zorg" && /zorgpremie|premie/.test(notes)) {
+    signals.push("Zorgpremie achterstand — at 6 months unpaid you are auto-enrolled in CAK wanbetalersregeling (~€161/month penalty premium).");
+  }
+
   return [
-    `Creditor: ${debt.creditorName} (${c.type})`,
+    `Creditor: ${debt.creditorName} (${c.type}, id: ${c.id})`,
     `Outstanding: €${debt.amount}`,
     `Original: €${debt.originalAmount}`,
     `Fees added: €${collectionFees}`,
@@ -344,5 +391,9 @@ function buildDebtContext(debt, c, s, collectionFees, monthlyIncome) {
     `Due: ${debt.dueDate}`,
     `Monthly income: €${monthlyIncome}`,
     `Notes: ${debt.notes || "none"}`,
+    "",
+    signals.length
+      ? "URGENCY SIGNALS:\n" + signals.map(line => `- ${line}`).join("\n")
+      : "URGENCY SIGNALS: none detected — this debt is in a manageable state.",
   ].join("\n");
 }
