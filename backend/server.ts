@@ -8,9 +8,9 @@ app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
 app.post("/api/advisor", async (req, res) => {
-  const { messages, systemPrompt } = req.body;
+  const { messages, systemPrompt, model } = req.body;
   try {
-    const reply = await runAdvisor(systemPrompt, messages);
+    const reply = await runAdvisor(systemPrompt, messages, model);
     res.json({ reply });
   } catch (err: any) {
     console.error("Advisor error:", err);
