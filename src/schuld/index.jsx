@@ -377,6 +377,8 @@ export default function SchuldOverzicht() {
     setShowAddDebt(false);
     setScanInitData(null);
     setPendingScanDoc(null);
+    setSelectedDebt(created);
+    setScreen("detail");
     return created;
   };
   const deleteDebt = async (id) => {
