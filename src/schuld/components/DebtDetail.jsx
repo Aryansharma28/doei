@@ -35,7 +35,7 @@ function LoadingDots() {
   );
 }
 
-export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, bankName, onMarkPaid }) {
+export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, bankName, onMarkPaid, onNavigate }) {
   const { t, lang, fmtDate } = useLang();
   const c = getCreditor(debt.creditorType);
   const s = getStageData(debt.stage);
@@ -240,37 +240,37 @@ Never call a sommatie or overdue debt "manageable" or "no problem". Be honest an
         })()}
       </div>
 
-      {/* What to do — primary CTA + supporting actions */}
+      {/* What to do — single sentence + advisor CTA */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiActionItems")}</div>
         {actionLoading ? <LoadingDots /> : (() => {
           const items = (actionContent || "").split("\n").map(l => l.replace(/^[-•\d.\s]+/, "").trim()).filter(Boolean);
           const primary = items[0];
-          const rest = items.slice(1);
           return (
-            <div>
+            <>
               {primary && (
-                <div style={{
-                  background: "var(--action-bg, #FFF1EE)",
-                  borderLeft: "3px solid var(--action-fg, #C8102E)",
-                  borderRadius: 8,
-                  padding: "12px 14px",
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "var(--text-primary)",
-                  lineHeight: 1.45,
-                }}>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "var(--text-primary)" }}>
                   {primary}
-                </div>
+                </p>
               )}
-              {rest.length > 0 && (
-                <ul style={{ margin: "12px 0 0", paddingLeft: 18, fontSize: 14, lineHeight: 1.6, color: "var(--text-primary)" }}>
-                  {rest.map((line, i) => (
-                    <li key={i} style={{ marginBottom: i < rest.length - 1 ? 6 : 0 }}>{line}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
+              <button
+                onClick={() => onNavigate?.("calendar")}
+                style={{
+                  marginTop: 14,
+                  width: "100%",
+                  height: 44,
+                  borderRadius: 12,
+                  background: "#111",
+                  color: "white",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {t("askAdvisorCta")}
+              </button>
+            </>
           );
         })()}
       </div>
