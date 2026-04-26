@@ -175,6 +175,6 @@ RLS is on by default everywhere. Service role is only used in API routes; the br
 
 ## Credits
 
-Built for [hackathon name] — Aryan Sharma, with substantial pair-coding by Claude Sonnet 4.6 via Claude Code.
+Built for **Whale × Anthropic** — Aryan Sharma, with substantial pair-coding by Claude Sonnet 4.6 via Claude Code.
 
 Inspired by everyone in NL who has ever opened a blue envelope and felt their stomach drop.
