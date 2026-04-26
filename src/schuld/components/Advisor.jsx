@@ -5,14 +5,22 @@ import { getCreditor, getStageData } from "../constants/creditors";
 import { fmt } from "../utils/helpers";
 import { createTrace } from "../../lib/langwatch";
 
-// Parse AI response into text segments and [PAY:...] action cards
+// Parse AI response into text segments and action cards ([PAY:...] single, [PAYPLAN:...] ranked list)
 function parseMessage(content) {
-  const parts = content.split(/(\[PAY:[^\]]+\])/g);
+  const parts = content.split(/(\[PAYPLAN:[^\]]+\]|\[PAY:[^\]]+\])/g);
   return parts.map(part => {
-    const m = part.match(/^\[PAY:([^:]+):([^:]+):([^\]]+)\]$/);
-    if (m) return { type: "pay", creditorId: m[1], amount: parseFloat(m[2]), label: m[3] };
+    const planM = part.match(/^\[PAYPLAN:([^\]]+)\]$/);
+    if (planM) {
+      const items = planM[1].split("|").map(entry => {
+        const [creditorId, amount] = entry.split(":");
+        return { creditorId, amount: parseFloat(amount) };
+      }).filter(it => it.creditorId && !isNaN(it.amount));
+      return items.length ? { type: "payplan", items } : { type: "text", content: "" };
+    }
+    const payM = part.match(/^\[PAY:([^:]+):([^:]+):([^\]]+)\]$/);
+    if (payM) return { type: "pay", creditorId: payM[1], amount: parseFloat(payM[2]), label: payM[3] };
     return { type: "text", content: part };
-  }).filter(p => p.type === "pay" || p.content?.trim());
+  }).filter(p => p.type !== "text" || p.content?.trim());
 }
 
 function PayActionCard({ creditorId, amount, label, lang }) {
@@ -44,6 +52,51 @@ function PayActionCard({ creditorId, amount, label, lang }) {
           {displayAmt} via {lang === "nl" ? "je bank" : "your bank"}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PayPlanCard({ items, lang }) {
+  const enriched = items.map(it => ({ ...it, creditor: getCreditor(it.creditorId) }));
+  const total = enriched.reduce((s, it) => s + it.amount, 0);
+
+  const onGo = () => {
+    const withUrls = enriched.filter(it => it.creditor?.paymentUrl);
+    withUrls.forEach((it, idx) => {
+      setTimeout(() => window.open(it.creditor.paymentUrl, "_blank", "noopener"), idx * 250);
+    });
+  };
+
+  return (
+    <div style={{ ...actionCardStyle, flexDirection: "column", alignItems: "stretch", gap: 10, padding: 14, cursor: "default" }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 2 }}>
+        {lang === "nl" ? "Betaal in deze volgorde" : "Pay in this order"}
+      </div>
+      {enriched.map((it, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(255,255,255,0.08)", borderRadius: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.6)", minWidth: 16 }}>{i + 1}</span>
+          <span style={{ fontSize: 16 }}>{it.creditor?.icon || "📄"}</span>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: "white", fontWeight: 600 }}>
+            {it.creditor?.id ? it.creditor.id.charAt(0).toUpperCase() + it.creditor.id.slice(1) : it.creditorId}
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{fmt(it.amount)}</div>
+        </div>
+      ))}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)" }}>{lang === "nl" ? "Totaal" : "Total"}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{fmt(total)}</div>
+      </div>
+      <button
+        onClick={onGo}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          background: "white", color: "#003082", border: "none", borderRadius: 10,
+          padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", marginTop: 2,
+        }}
+      >
+        <IDealLogo />
+        {lang === "nl" ? "Ga ervoor — open betalingen" : "Go for it — open payments"}
+      </button>
     </div>
   );
 }
@@ -119,7 +172,7 @@ DUTCH CONTEXT (explain in plain language, never use raw legal terms):
 - There is a protected minimum income that cannot be seized by law — reassuring to mention if they're scared of garnishment.
 
 PAYMENT ACTION CARDS:
-When you recommend paying a specific debt right now, include a payment tag on its own line (no surrounding text on that line):
+When you recommend paying one specific debt right now, include a payment tag on its own line (no surrounding text on that line):
 [PAY:creditorId:amount:Short label]
 
 Use the exact creditor id from the debt list (e.g. cjib, belasting, huur). Only include PAY tags when it is genuinely the right immediate action. Never include more than 3 PAY tags in one response.
@@ -127,7 +180,26 @@ Use the exact creditor id from the debt list (e.g. cjib, belasting, huur). Only 
 Example:
 Contact the CJIB today to avoid your fine escalating further.
 
-[PAY:cjib:490:CJIB – Verkeersboete]`;
+[PAY:cjib:490:CJIB – Verkeersboete]
+
+PAYMENT PLAN CARDS (when they want to pay multiple things):
+If the user signals they're ready to pay something but hasn't told you how much they have available, ASK FIRST — one short question, e.g. "How much can you put toward debts this week?" Do NOT emit a plan tag in that turn.
+
+Once they give you an amount, suggest a ranked plan as a single tag on its own line:
+[PAYPLAN:creditorId1:amount1|creditorId2:amount2|creditorId3:amount3]
+
+Rules for the plan:
+- Rank by criticality: (1) public creditors with garnishment power (belasting, cjib, duo, cak), (2) huur (rent arrears = eviction risk), (3) stage action_needed, (4) stage warning, (5) due-date proximity as tiebreaker.
+- Greedy fill: include items in priority order until the sum reaches the amount they named. The last item can be a partial amount to use the budget exactly.
+- Use the exact creditor ids from the debt list. Amounts are numbers only (no euro sign, no decimals needed).
+- Max 5 items per plan. Never exceed the amount they said they have.
+- Don't mix [PAY:...] and [PAYPLAN:...] in the same response — pick one.
+- The card has its own "Go for it" button, so don't repeat the list in prose. One short sentence above the tag is enough.
+
+Example (user said they have €600):
+Here's where I'd put it, hardest hitters first.
+
+[PAYPLAN:cjib:490|huur:110]`;
   };
 
   const sendMessage = async (text) => {
@@ -199,13 +271,13 @@ Contact the CJIB today to avoid your fine escalating further.
             {msg.role === "assistant" && <div style={S.msgBotAvatar}>◉</div>}
             <div style={msg.role === "user" ? S.msgBubbleUser : S.msgBubbleBot}>
               {msg.role === "assistant"
-                ? parseMessage(msg.content).map((part, j) =>
-                    part.type === "pay"
-                      ? <PayActionCard key={j} {...part} lang={lang} />
-                      : part.content.split("\n").map((line, k) => (
-                          <p key={`${j}-${k}`} style={{ margin: line.trim() ? "0 0 8px 0" : "0", lineHeight: 1.5 }}>{line}</p>
-                        ))
-                  )
+                ? parseMessage(msg.content).map((part, j) => {
+                    if (part.type === "pay") return <PayActionCard key={j} {...part} lang={lang} />;
+                    if (part.type === "payplan") return <PayPlanCard key={j} items={part.items} lang={lang} />;
+                    return part.content.split("\n").map((line, k) => (
+                      <p key={`${j}-${k}`} style={{ margin: line.trim() ? "0 0 8px 0" : "0", lineHeight: 1.5 }}>{line}</p>
+                    ));
+                  })
                 : msg.content.split("\n").map((line, j) => (
                     <p key={j} style={{ margin: line ? "0 0 8px 0" : "0", lineHeight: 1.5 }}>{line}</p>
                   ))
