@@ -223,7 +223,7 @@ export function VoiceCallModal({ debts, income, lang, firstName, onClose }) {
               width: 48,
               height: 48,
               borderRadius: 24,
-              background: agentSpeaking ? "#00aa44" : "var(--accent, #0070f3)",
+              background: agentSpeaking ? "#00aa44" : "#111",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
