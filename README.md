@@ -1,6 +1,6 @@
 # doei
 
-**👉 Best experience: open on your phone → [doei.vercel.app](https://doei.vercel.app/app)**
+**👉 Best experience: open on your phone → [doei-alpha.vercel.app/app](https://doei-alpha.vercel.app/app)**
 
 > Dutch for "bye" — as in, bye debt.
 
@@ -39,7 +39,17 @@ The mock bank flow works with just `npm run dev` — no credentials needed. Go t
 ANTHROPIC_API_KEY=
 
 # Supabase server-side (for API routes)
+SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=     # Supabase dashboard → Settings → API → service_role
+SUPABASE_MCP_TOKEN=
+
+# Gmail MCP morning sync
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_SYNC_USER_ID=
+GMAIL_MCP_QUERY=newer_than:1d
+CRON_SECRET=
 
 # GoCardless Bank Account Data — bankaccountdata.gocardless.com (free tier, NL banks)
 GOCARDLESS_SECRET_ID=
@@ -57,6 +67,8 @@ APP_URL=http://localhost:5173  # your Vercel URL in prod
 | `POST /api/gocardless/connect` | Start PSD2 OAuth → returns bank redirect URL |
 | `POST /api/gocardless/sync` | Fetch transactions + Claude debt detection |
 | `POST /api/gocardless/mock-connect` | Dev mock — no credentials needed |
+| `POST /api/gmail/sync` | Search Gmail through MCP + flag debt emails |
+| `GET /api/cron/gmail-sync` | Daily Gmail morning sync for one configured user |
 
 ## Supabase tables
 
@@ -66,6 +78,22 @@ APP_URL=http://localhost:5173  # your Vercel URL in prod
 | `suggested_debts` | Claude-detected debts awaiting user confirmation |
 
 RLS enabled on both — users only touch their own rows.
+
+## Gmail sync setup
+
+The Gmail integration uses a local MCP server in the backend, not a direct Gmail client inside the app.
+
+1. Enable the Gmail API and create OAuth credentials in Google Cloud. Google’s official Node.js quickstart covers the Gmail API enablement and OAuth client setup flow: https://developers.google.com/workspace/gmail/api/quickstart/nodejs
+2. Google’s Gmail auth guide explains the server-side OAuth flow and the need for refresh tokens for offline access: https://developers.google.com/workspace/gmail/api/auth/web-server
+3. If you mint the refresh token with OAuth Playground, Google documents adding `https://developers.google.com/oauthplayground` as an authorized redirect URI and exchanging the auth code there: https://developers.google.com/admob/api/v1/how-tos/playground
+4. Put `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` in the server environment.
+5. Set `GMAIL_SYNC_USER_ID` to the Supabase user that should receive the suggested debts created by the daily run.
+
+Notes:
+
+- The morning cron is configured in `vercel.json` for `0 6 * * *`, which is 06:00 UTC every day.
+- The current Gmail MCP package supports reading/searching Gmail only. It does not apply Gmail labels, so detected messages are marked inside doei as suggested debt items instead.
+- The Account screen’s Gmail button hits the same backend sync path as the cron job, so it is the quickest verification path.
 
 ## How the bank scan works
 
