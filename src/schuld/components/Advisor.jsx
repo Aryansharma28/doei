@@ -4,6 +4,7 @@ import { useLang } from "../hooks/useLang";
 import { getCreditor, getStageData } from "../constants/creditors";
 import { fmt } from "../utils/helpers";
 import { createTrace } from "../../lib/langwatch";
+import { VoiceCallButton } from "./VoiceCallButton";
 
 // Parse AI response into text segments and action cards ([PAY:...] single, [PAYPLAN:...] ranked list)
 function parseMessage(content) {
@@ -60,43 +61,41 @@ function PayPlanCard({ items, lang }) {
   const enriched = items.map(it => ({ ...it, creditor: getCreditor(it.creditorId) }));
   const total = enriched.reduce((s, it) => s + it.amount, 0);
 
-  const onGo = () => {
-    const withUrls = enriched.filter(it => it.creditor?.paymentUrl);
-    withUrls.forEach((it, idx) => {
-      setTimeout(() => window.open(it.creditor.paymentUrl, "_blank", "noopener"), idx * 250);
-    });
-  };
-
   return (
-    <div style={{ ...actionCardStyle, flexDirection: "column", alignItems: "stretch", gap: 10, padding: 14, cursor: "default" }}>
+    <div style={{ ...actionCardStyle, flexDirection: "column", alignItems: "stretch", gap: 8, padding: 14, cursor: "default" }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 2 }}>
         {lang === "nl" ? "Betaal in deze volgorde" : "Pay in this order"}
       </div>
-      {enriched.map((it, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(255,255,255,0.08)", borderRadius: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.6)", minWidth: 16 }}>{i + 1}</span>
-          <span style={{ fontSize: 16 }}>{it.creditor?.icon || "📄"}</span>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: "white", fontWeight: 600 }}>
-            {it.creditor?.id ? it.creditor.id.charAt(0).toUpperCase() + it.creditor.id.slice(1) : it.creditorId}
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{fmt(it.amount)}</div>
-        </div>
-      ))}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+      {enriched.map((it, i) => {
+        const url = it.creditor?.paymentUrl;
+        const name = it.creditor?.id ? it.creditor.id.charAt(0).toUpperCase() + it.creditor.id.slice(1) : it.creditorId;
+        const rowInner = (
+          <>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.6)", minWidth: 16 }}>{i + 1}</span>
+            <span style={{ fontSize: 16 }}>{it.creditor?.icon || "📄"}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: "white", fontWeight: 600 }}>{name}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 1 }}>
+                {url
+                  ? (lang === "nl" ? "Open site om te betalen" : "Open site to pay")
+                  : (lang === "nl" ? "Betaal via je bank" : "Pay via your bank")}
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{fmt(it.amount)}</div>
+            {url && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginLeft: 4 }}>↗</span>}
+          </>
+        );
+        const baseStyle = { display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(255,255,255,0.08)", borderRadius: 8, textDecoration: "none" };
+        return url ? (
+          <a key={i} href={url} target="_blank" rel="noreferrer" style={baseStyle}>{rowInner}</a>
+        ) : (
+          <div key={i} style={baseStyle}>{rowInner}</div>
+        );
+      })}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)" }}>{lang === "nl" ? "Totaal" : "Total"}</div>
         <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{fmt(total)}</div>
       </div>
-      <button
-        onClick={onGo}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          background: "white", color: "#003082", border: "none", borderRadius: 10,
-          padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", marginTop: 2,
-        }}
-      >
-        <IDealLogo />
-        {lang === "nl" ? "Ga ervoor" : "Go for it"}
-      </button>
     </div>
   );
 }
@@ -244,10 +243,11 @@ Here's where I'd put it, hardest hitters first.
     <div style={S.advisorWrap} className="doei-advisor-wrap screen-in">
       <div style={S.advisorHeader}>
         <div style={S.advisorAvatar}>◉</div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={S.advisorTitle}>{t("advisorTitle")}</div>
           <div style={S.advisorSubtitle}>{t("advisorSub")}</div>
         </div>
+        <VoiceCallButton debts={debts} income={income} lang={lang} />
       </div>
 
       <div style={S.chatArea}>
