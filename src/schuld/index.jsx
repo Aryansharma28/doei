@@ -536,6 +536,17 @@ export default function SchuldOverzicht() {
         notes: parsed.notes || "",
       });
       if (created) {
+        if (scanDoc) {
+          const { error: docErr } = await supabase.from("documents").insert({
+            user_id: session.user.id,
+            debt_id: created.id,
+            file_url: scanDoc.publicUrl,
+            file_name: scanDoc.name,
+            file_type: scanDoc.type,
+          });
+          if (docErr) console.error("[scan] document insert failed:", docErr);
+        }
+        setPendingScanDoc(null);
         setSelectedDebt(created);
         setScreen("detail");
         return;
