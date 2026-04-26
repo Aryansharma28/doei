@@ -89,21 +89,6 @@ export default function SchuldOverzicht() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Bank callback — GoCardless redirects back with ?bank_ref=<requisition_id>
-  useEffect(() => {
-    if (!session) return;
-    const params = new URLSearchParams(window.location.search);
-    const bankRef = params.get("bank_ref");
-    if (!bankRef) return;
-    window.history.replaceState({}, "", window.location.pathname);
-    fetch("/api/gocardless/sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requisition_id: bankRef, user_id: session.user.id }),
-    })
-      .then(r => r.json())
-      .then(d => { if (d.suggested?.length) setSuggestedDebts(d.suggested); setScreen("account"); });
-  }, [session]);
 
   useLayoutEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
