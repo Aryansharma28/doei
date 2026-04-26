@@ -26,12 +26,14 @@ That's `doei`.
 
 ## Wow moments worth demoing
 
-| Moment | Why it lands |
-|---|---|
-| Drop a CJIB sommatie PDF on the screen → 3 seconds → debt detail page with letter attached, urgent CTA visible | The whole pipeline (storage → vision OCR → debt insert → linked document → AI summary) in one motion |
-| "Hey Doei, what's my biggest debt right now?" on a voice call | Real voice-to-voice with full debt context |
-| Open the Intrum debt → see "Sommatie van incassobureau voor T-Mobile vordering. Last warning before court — pay €445 before April 27 or bailiff action starts." | Compare against a generic "this is a debt" summary — this is reading the actual letter body |
-| Switch language NL ↔ EN — every screen flips, including AI responses | Real i18n, not a half-job |
+| Moment | Why it lands | Screenshot |
+|---|---|---|
+| Login using preferred moment | Clean easy interface | ![](image.png) |
+| Drop a new correspondence on the screen | Easy to read overview of what is happening, action items, calls to action and payment button | ![](image-1.png) |
+| Ask Doei about your debts and what actions to take | Has the full context, has empathy and tries to help you | ![](image-3.png) |
+| See your full debt overview | Actionable overview, easy to read, including all your debts | ![](image-2.png) |
+| Switch language NL ↔ EN, including AI responses | Allows to use your own language | ![](image-5.png) |
+| Connect all your data sources | Receive a full picture of your debts by connecting public sources as well (Mijn Betaaloverzicht, Schuldenwijzer) | ![](image-4.png) |
 
 ## How it works
 
