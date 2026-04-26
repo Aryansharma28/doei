@@ -1,25 +1,18 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { syncDebtEmails } from "../../backend/gmail-sync.js";
-import { hasGmailMcpConfig } from "../../backend/mcp.js";
+import { syncGmailForUser } from "../../backend/gmail-sync.js";
+import { getAuthenticatedSupabaseUser } from "../../backend/supabase-admin.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
-  if (!hasGmailMcpConfig) {
-    return res.status(500).json({
-      error: "Gmail MCP is not configured",
-    });
-  }
-
-  const { user_id, query, maxResults } = req.body as {
-    user_id?: string;
-    query?: string;
-    maxResults?: number;
-  };
-
   try {
-    const result = await syncDebtEmails({
-      userId: user_id,
+    const { user } = await getAuthenticatedSupabaseUser(req.headers.authorization);
+    const { query, maxResults } = req.body as {
+      query?: string;
+      maxResults?: number;
+    };
+
+    const result = await syncGmailForUser(user.id, {
       query,
       maxResults,
     });

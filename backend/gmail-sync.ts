@@ -1,7 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { createClient } from "@supabase/supabase-js";
 import { generateText } from "ai";
-import { gmailMcp, hasGmailMcpConfig } from "./mcp.js";
+import { createGmailMcpClient, hasGmailOAuthConfig } from "./mcp.js";
+import { supabaseAdmin } from "./supabase-admin.js";
 
 const CREDITOR_TYPES = new Set([
   "belasting",
@@ -32,6 +32,14 @@ type RawSuggestion = {
   amount?: unknown;
   transaction_date?: unknown;
   description?: unknown;
+};
+
+export type GmailConnectionRecord = {
+  id: string;
+  user_id: string;
+  google_email: string | null;
+  refresh_token: string;
+  status: string | null;
 };
 
 export type GmailSuggestedDebt = {
@@ -132,12 +140,14 @@ function parseSuggestions(text: string) {
     .filter((item): item is GmailSuggestedDebt => Boolean(item));
 }
 
-async function analyzeDebtEmails(query: string, maxResults: number) {
-  if (!gmailMcp || !hasGmailMcpConfig) {
-    throw new Error("Gmail MCP credentials are not configured");
+async function analyzeDebtEmails(refreshToken: string, query: string, maxResults: number) {
+  if (!hasGmailOAuthConfig) {
+    throw new Error("Gmail OAuth app credentials are not configured");
   }
 
+  const gmailMcp = createGmailMcpClient(refreshToken);
   const tools = await gmailMcp.listTools();
+
   const { text } = await generateText({
     model: anthropic("claude-sonnet-4-6"),
     system: `You classify Gmail messages for a debt-management app.
@@ -164,22 +174,13 @@ Exclude marketing, newsletters, payment confirmations for already-paid orders, a
   return parseSuggestions(text);
 }
 
-async function storeSuggestions(userId: string | undefined, suggested: GmailSuggestedDebt[]) {
-  if (!userId || suggested.length === 0) {
+async function storeSuggestions(userId: string, suggested: GmailSuggestedDebt[]) {
+  if (!supabaseAdmin || suggested.length === 0) {
     return 0;
   }
-
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return 0;
-  }
-
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
 
   const descriptions = suggested.map((item) => `[gmail:${item.email_id}] ${item.description}`);
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await supabaseAdmin
     .from("suggested_debts")
     .select("description")
     .eq("user_id", userId)
@@ -208,7 +209,7 @@ async function storeSuggestions(userId: string | undefined, suggested: GmailSugg
     return 0;
   }
 
-  const { error } = await supabase.from("suggested_debts").insert(rows);
+  const { error } = await supabaseAdmin.from("suggested_debts").insert(rows);
   if (error) {
     console.error("Gmail sync store failed:", error);
     return 0;
@@ -217,18 +218,121 @@ async function storeSuggestions(userId: string | undefined, suggested: GmailSugg
   return rows.length;
 }
 
-export async function syncDebtEmails(params?: {
-  query?: string;
-  maxResults?: number;
-  userId?: string;
-}) {
+async function markConnectionSuccess(connectionId: string) {
+  if (!supabaseAdmin) {
+    return;
+  }
+
+  await supabaseAdmin
+    .from("gmail_connections")
+    .update({
+      status: "connected",
+      last_synced_at: new Date().toISOString(),
+      last_error: null,
+    })
+    .eq("id", connectionId);
+}
+
+async function markConnectionError(connectionId: string, errorMessage: string) {
+  if (!supabaseAdmin) {
+    return;
+  }
+
+  await supabaseAdmin
+    .from("gmail_connections")
+    .update({
+      status: "error",
+      last_error: errorMessage.slice(0, 500),
+    })
+    .eq("id", connectionId);
+}
+
+export async function getGmailConnectionForUser(userId: string) {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase admin is not configured");
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("gmail_connections")
+    .select("id, user_id, google_email, refresh_token, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as GmailConnectionRecord | null;
+}
+
+export async function syncGmailConnection(
+  connection: GmailConnectionRecord,
+  params?: { query?: string; maxResults?: number }
+) {
   const query = params?.query?.trim() || process.env.GMAIL_MCP_QUERY || "newer_than:1d";
   const maxResults = Math.min(Math.max(params?.maxResults ?? 20, 1), 50);
-  const suggested = await analyzeDebtEmails(query, maxResults);
-  const stored = await storeSuggestions(params?.userId, suggested);
+
+  try {
+    const suggested = await analyzeDebtEmails(connection.refresh_token, query, maxResults);
+    const stored = await storeSuggestions(connection.user_id, suggested);
+    await markConnectionSuccess(connection.id);
+
+    return {
+      suggested,
+      stored,
+    } satisfies GmailSyncResult;
+  } catch (error: any) {
+    await markConnectionError(connection.id, error.message || "Unknown Gmail sync error");
+    throw error;
+  }
+}
+
+export async function syncGmailForUser(
+  userId: string,
+  params?: { query?: string; maxResults?: number }
+) {
+  const connection = await getGmailConnectionForUser(userId);
+  if (!connection) {
+    throw new Error("Gmail is not connected for this user");
+  }
+
+  return syncGmailConnection(connection, params);
+}
+
+export async function syncAllGmailConnections(params?: {
+  query?: string;
+  maxResults?: number;
+}) {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase admin is not configured");
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("gmail_connections")
+    .select("id, user_id, google_email, refresh_token, status")
+    .in("status", ["connected", "error"]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const connections = (data ?? []) as GmailConnectionRecord[];
+  let matched = 0;
+  let stored = 0;
+
+  for (const connection of connections) {
+    try {
+      const result = await syncGmailConnection(connection, params);
+      matched += result.suggested.length;
+      stored += result.stored;
+    } catch (error) {
+      console.error(`Gmail sync failed for user ${connection.user_id}:`, error);
+    }
+  }
 
   return {
-    suggested,
+    connections: connections.length,
+    matched,
     stored,
-  } satisfies GmailSyncResult;
+  };
 }
