@@ -71,12 +71,21 @@ class FinancialAdvisor(Agent):
         debts: list,
         income: list,
         lang: str,
+        opening_line: str,
     ) -> None:
         super().__init__(instructions=instructions)
         self._user_id = user_id
         self._debts = debts
         self._income = income
         self._lang = lang
+        self._opening_line = opening_line
+
+    async def on_enter(self) -> None:
+        # Speak the canned opening, then hand control back to the session
+        # loop. Doing this from on_enter (instead of session.say() in the
+        # entrypoint) ensures the session is fully initialized before the
+        # first turn, so subsequent user turns get processed normally.
+        self.session.say(self._opening_line, allow_interruptions=True)
 
     @function_tool()
     async def get_financial_summary(self) -> dict:
@@ -142,12 +151,14 @@ async def entrypoint(ctx: JobContext) -> None:
         vad=silero.VAD.load(),
     )
 
+    opening_key = "returning" if past_calls else "first_call"
     advisor = FinancialAdvisor(
         instructions=system_prompt,
         user_id=user_id,
         debts=debts,
         income=income,
         lang=lang,
+        opening_line=OPENING_FALLBACK[lang][opening_key],
     )
 
     # Capture both sides of the conversation as we go so we can summarize
@@ -171,10 +182,6 @@ async def entrypoint(ctx: JobContext) -> None:
                 transcript_lines.append(f"Advisor: {content}")
 
     await session.start(agent=advisor, room=ctx.room)
-
-    # Pre-warmed opening so TTS starts synthesizing immediately on connect.
-    opening_key = "returning" if past_calls else "first_call"
-    await session.say(OPENING_FALLBACK[lang][opening_key], allow_interruptions=True)
 
     saved = False
 
