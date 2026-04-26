@@ -308,7 +308,7 @@ Never call a sommatie or overdue debt "manageable" or "no problem". Be honest an
             {docs.map(doc => (
               <div key={doc.id} style={S.docTableRow}>
                 <div style={{ flex: 2, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>{doc.file_type?.startsWith("image") ? "🖼️" : "📄"}</span>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{doc.file_type === "email/gmail" ? "✉️" : doc.file_type?.startsWith("image") ? "🖼️" : "📄"}</span>
                   <span style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.file_name}</span>
                 </div>
                 <div style={{ flex: 1, fontSize: 11, color: "var(--text-secondary)", textAlign: "center" }}>
