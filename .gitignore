@@ -1,0 +1,15 @@
+# env
+.env
+.env.local
+.env*.local
+.mcp.json
+
+# build
+dist/
+node_modules/
+
+# tooling artifacts
+.playwright-mcp/
+*.png
+*.jpg
+*.jpeg

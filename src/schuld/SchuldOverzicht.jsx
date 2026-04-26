@@ -89,8 +89,8 @@ const useLang = () => useContext(LangContext);
 
 // ─── Storage ───
 const storage = {
-  async get(key) { try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : null; } catch { return null; } },
-  async set(key, val) { try { await window.storage.set(key, JSON.stringify(val)); } catch (e) { console.error("Storage error:", e); } }
+  async get(key) { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : null; } catch { return null; } },
+  async set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { console.error("Storage error:", e); } }
 };
 
 // ─── Data ───

@@ -1,166 +1,272 @@
 import { useState } from "react";
 import { S } from "../styles/styles";
 import { useLang } from "../hooks/useLang";
-
-const serif = "'Source Serif 4', Georgia, serif";
+import { supabase } from "../../lib/supabase";
+import { fmt } from "../utils/helpers";
 
 const BANKS = [
-  { id: "ing",     name: "ING",        color: "#FF6200" },
-  { id: "abn",     name: "ABN AMRO",   color: "#00A650" },
-  { id: "rabo",    name: "Rabobank",   color: "#CC0000" },
-  { id: "sns",     name: "SNS Bank",   color: "#F28C00" },
-  { id: "asn",     name: "ASN Bank",   color: "#005C3E" },
-  { id: "triodos", name: "Triodos",    color: "#006837" },
-  { id: "bunq",    name: "bunq",       color: "#3AABF0" },
-  { id: "revolut", name: "Revolut",    color: "#191C1F" },
+  { id: "ING_INGBNL2A",    name: "ING",        color: "#FF6200" },
+  { id: "ABNANL2A",        name: "ABN AMRO",   color: "#007B5E" },
+  { id: "RABONL2U",        name: "Rabobank",   color: "#CC0000" },
+  { id: "SNSBNL2A",        name: "SNS Bank",   color: "#F28C00" },
+  { id: "ASNBNL21",        name: "ASN Bank",   color: "#005C3E" },
+  { id: "TRIONL2U",        name: "Triodos",    color: "#006837" },
+  { id: "BUNQNL2A",        name: "bunq",       color: "#3AABF0" },
+  { id: "REVOLT21",        name: "Revolut",    color: "#191C1F" },
 ];
 
-function Initials({ name }) {
-  const letters = name
-    ? name.trim().split(/\s+/).map(n => n[0]).slice(0, 2).join("").toUpperCase()
-    : "?";
+function BankLogo({ color, name }) {
+  const initials = name.slice(0, 2).toUpperCase();
   return (
-    <div style={{ width: 72, height: 72, borderRadius: 36, background: "linear-gradient(135deg, #3D405B, #5C6090)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, flexShrink: 0 }}>
-      {letters}
+    <div style={{ width: 44, height: 44, borderRadius: 14, background: color, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+      {initials}
     </div>
   );
 }
 
-function IntegRow({ integ, connection, onConnect, onDisconnect, t }) {
-  const connected = !!connection;
+function SuggestedDebtCard({ s, onAccept, onDismiss }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid var(--border-color)" }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: integ.iconBg, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, flexShrink: 0 }}>
-        {integ.icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>{integ.label}</span>
-          {connected && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#16A34A", background: "#DCFCE7", padding: "2px 7px", borderRadius: 6 }}>
-              {t("connected")}
-            </span>
-          )}
+    <div style={{ background: "var(--paper-1)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-0)" }}>{s.creditor_name}</div>
+          <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}>{s.description}</div>
         </div>
-        <div style={{ fontSize: 13, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {connected && connection.info ? connection.info : integ.description}
-        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ink-0)", flexShrink: 0 }}>{fmt(s.amount)}</div>
       </div>
-      {connected ? (
-        <button style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 8, padding: "7px 12px", fontSize: 13, color: "var(--text-secondary)", cursor: "pointer", flexShrink: 0 }} onClick={() => onDisconnect(integ.id)}>
-          {t("disconnect")}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => onAccept(s)}
+          style={{ flex: 1, height: 38, background: "var(--accent)", color: "white", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+        >
+          Add debt
         </button>
-      ) : (
-        <button style={{ background: "#3D405B", color: "white", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }} onClick={() => onConnect(integ.id)}>
-          {t("connectBtn")}
+        <button
+          onClick={() => onDismiss(s)}
+          style={{ flex: 1, height: 38, background: "var(--paper-2)", color: "var(--ink-1)", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+        >
+          Dismiss
         </button>
-      )}
+      </div>
     </div>
   );
 }
 
-export function Account({ profile, onSaveProfile, connections, onConnect, onDisconnect }) {
+export function Account({ profile, onSaveProfile, connections, onConnect, onDisconnect, session, suggestedDebts = [], onAcceptSuggested, onDismissSuggested, onSuggest }) {
   const { t } = useLang();
   const [form, setForm] = useState(profile);
   const [edited, setEdited] = useState(false);
   const [showBankPicker, setShowBankPicker] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState("");
+  const [gmailSyncing, setGmailSyncing] = useState(false);
+  const [gmailError, setGmailError] = useState("");
+  const [gmailStatus, setGmailStatus] = useState("");
 
-  const change = (field, val) => {
-    setForm(p => ({ ...p, [field]: val }));
-    setEdited(true);
+  const change = (field, val) => { setForm(p => ({ ...p, [field]: val })); setEdited(true); };
+
+  const handleBankConnect = async (bank) => {
+    setShowBankPicker(false);
+    setConnecting(true);
+    setConnectError("");
+    try {
+      // Mock: simulate bank scan with realistic Dutch transactions
+      await new Promise(r => setTimeout(r, 1800));
+      const suggested = [
+        { creditor_name: "Belastingdienst", creditor_type: "belasting", amount: 312, transaction_date: "2026-04-01", description: "Inkomstenbelasting 2024" },
+        { creditor_name: "Klarna", creditor_type: "klarna", amount: 89.50, transaction_date: "2026-03-28", description: "3x gespreide betaling webshop" },
+        { creditor_name: "CJIB", creditor_type: "cjib", amount: 156, transaction_date: "2026-03-20", description: "Verkeersboete A10" },
+        { creditor_name: "DUO", creditor_type: "duo", amount: 234, transaction_date: "2026-03-15", description: "Studieschuld terugbetaling" },
+        { creditor_name: "Vattenfall", creditor_type: "energie", amount: 67.80, transaction_date: "2026-03-10", description: "Jaarafrekening gas/stroom" },
+        { creditor_name: "Ymere", creditor_type: "huur", amount: 198, transaction_date: "2026-03-05", description: "Huurachterstand maart" },
+      ];
+      onConnect("bank", { name: bank.name, info: bank.name });
+      onSuggest(suggested);
+    } catch (err) {
+      setConnectError(err.message);
+    } finally {
+      setConnecting(false);
+    }
   };
 
-  const integrations = [
-    {
-      id: "gmail",
-      label: "Gmail",
-      description: t("gmailDesc"),
-      iconBg: "#EA4335",
-      icon: "G",
-    },
-    {
-      id: "bank",
-      label: t("bankAccount"),
-      description: t("bankDesc"),
-      iconBg: "#1A73E8",
-      icon: "🏦",
-    },
-    {
-      id: "digid",
-      label: "DigiD",
-      description: t("digiDDesc"),
-      iconBg: "#E17000",
-      icon: "D",
-    },
-  ];
+  const handleSignOut = () => supabase.auth.signOut();
+  const handleGmailSync = async () => {
+    setGmailSyncing(true);
+    setGmailError("");
+    setGmailStatus("");
 
-  const handleConnect = (id) => {
-    if (id === "bank") { setShowBankPicker(true); return; }
-    onConnect(id, {});
+    try {
+      const res = await fetch("/api/gmail/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: session?.user?.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to sync Gmail");
+
+      onConnect("gmail", { name: "Gmail", info: session?.user?.email || "Connected" });
+      if (data.suggested?.length) {
+        onSuggest(prev => {
+          const current = prev || [];
+          const seen = new Set(current.map(item => item.email_id || `${item.creditor_name}-${item.transaction_date}-${item.amount}`));
+          const next = [...current];
+          data.suggested.forEach(item => {
+            const key = item.email_id || `${item.creditor_name}-${item.transaction_date}-${item.amount}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              next.unshift(item);
+            }
+          });
+          return next;
+        });
+      }
+      setGmailStatus(
+        data.suggested?.length
+          ? `Found ${data.suggested.length} debt-related ${data.suggested.length === 1 ? "email" : "emails"}`
+          : "No debt-related emails found in the latest sync"
+      );
+    } catch (err) {
+      setGmailError(err.message);
+    } finally {
+      setGmailSyncing(false);
+    }
   };
+
+  const bankConnected = !!connections.bank;
+  const gmailConnected = !!connections.gmail;
 
   return (
-    <div style={S.sc}>
-      <div style={S.screenHeader}>
-        <span style={S.screenTitle}>{t("account")}</span>
-      </div>
-
-      {/* Avatar + display name */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, gap: 8 }}>
-        <Initials name={form.name} />
-        {form.name && (
-          <div style={{ fontSize: 18, fontWeight: 700, fontFamily: serif, color: "var(--text-primary)" }}>{form.name}</div>
-        )}
-        {form.email && (
-          <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: -4 }}>{form.email}</div>
-        )}
-      </div>
+    <div style={S.sc} className="screen-in">
+      {/* Suggested debts banner */}
+      {suggestedDebts.length > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-0)", marginBottom: 10 }}>
+            Detected from your bank — {suggestedDebts.length} possible {suggestedDebts.length === 1 ? "debt" : "debts"}
+          </div>
+          {suggestedDebts.map((s, i) => (
+            <SuggestedDebtCard key={i} s={s} onAccept={onAcceptSuggested} onDismiss={onDismissSuggested} />
+          ))}
+        </div>
+      )}
 
       {/* Profile */}
       <div style={S.card}>
-        <div style={S.cardTitle}>{t("profile")}</div>
-        <div style={S.fg}>
-          <label style={S.fLabel}>{t("profileName")}</label>
-          <input style={{ ...S.fInput, boxSizing: "border-box" }} value={form.name} onChange={e => change("name", e.target.value)} placeholder={t("profileNamePh")} />
+        <div style={S.cardTitle}>Profile</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 26, background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 600, flexShrink: 0 }}>
+            {(form.name || session?.user?.email || "?")[0].toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-0)" }}>{form.name || "—"}</div>
+            <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{session?.user?.email}</div>
+          </div>
         </div>
-        <div style={S.fg}>
-          <label style={S.fLabel}>{t("profileEmail")}</label>
-          <input style={{ ...S.fInput, boxSizing: "border-box" }} type="email" value={form.email} onChange={e => change("email", e.target.value)} placeholder="naam@example.nl" />
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Name</label>
+          <input style={{ ...S.fInput, boxSizing: "border-box" }} value={form.name} onChange={e => change("name", e.target.value)} placeholder="Your name" />
         </div>
-        <div style={S.fg}>
-          <label style={S.fLabel}>{t("profilePhone")}</label>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Phone</label>
           <input style={{ ...S.fInput, boxSizing: "border-box" }} type="tel" value={form.phone} onChange={e => change("phone", e.target.value)} placeholder="+31 6 12 34 56 78" />
         </div>
         {edited && (
           <button style={S.submitBtn} onClick={() => { onSaveProfile(form); setEdited(false); }}>
-            {t("saveChanges")}
+            Save changes
           </button>
         )}
       </div>
 
-      {/* Integrations */}
+      {/* Bank connection */}
       <div style={S.card}>
-        <div style={S.cardTitle}>{t("integrations")}</div>
-        <div style={{ ...S.cardSub, marginBottom: 4 }}>{t("integrationsSub")}</div>
-        {integrations.map(integ => (
-          <IntegRow key={integ.id} integ={integ} connection={connections[integ.id]} onConnect={handleConnect} onDisconnect={onDisconnect} t={t} />
-        ))}
-        <div style={{ height: 1 }} /> {/* remove last border */}
+        <div style={S.cardTitle}>Bank</div>
+        {bankConnected ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-0)" }}>{connections.bank?.name}</div>
+              <div style={{ fontSize: 12, color: "var(--stable-fg)", marginTop: 2 }}>Connected · syncing transactions</div>
+            </div>
+            <button
+              onClick={() => onDisconnect("bank")}
+              style={{ background: "var(--paper-2)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 13, color: "var(--ink-1)", cursor: "pointer" }}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 14, lineHeight: 1.5 }}>
+              Connect your bank via PSD2 open banking. We'll scan for debt repayments and suggest them automatically.
+            </p>
+            {connectError && <p style={{ fontSize: 13, color: "var(--action-fg)", marginBottom: 10 }}>{connectError}</p>}
+            <button
+              onClick={() => setShowBankPicker(true)}
+              disabled={connecting}
+              style={{ width: "100%", height: 48, background: connecting ? "var(--paper-2)" : "var(--accent)", color: connecting ? "var(--ink-2)" : "white", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: connecting ? "default" : "pointer" }}
+            >
+              {connecting ? "Connecting…" : "Connect bank →"}
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Bank picker */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Gmail</div>
+        <p style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 14, lineHeight: 1.5 }}>
+          Search your recent Gmail inbox via the server-side MCP and flag debt-related emails as suggested debts.
+        </p>
+        {gmailError && <p style={{ fontSize: 13, color: "var(--action-fg)", marginBottom: 10 }}>{gmailError}</p>}
+        {gmailStatus && <p style={{ fontSize: 13, color: "var(--stable-fg)", marginBottom: 10 }}>{gmailStatus}</p>}
+        {gmailConnected && (
+          <div style={{ fontSize: 12, color: "var(--stable-fg)", marginBottom: 10 }}>
+            Connected as {connections.gmail?.info}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={handleGmailSync}
+            disabled={gmailSyncing}
+            style={{ flex: 1, height: 48, background: gmailSyncing ? "var(--paper-2)" : "var(--accent)", color: gmailSyncing ? "var(--ink-2)" : "white", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: gmailSyncing ? "default" : "pointer" }}
+          >
+            {gmailSyncing ? "Checking Gmail…" : gmailConnected ? "Sync Gmail now" : "Connect Gmail"}
+          </button>
+          {gmailConnected && (
+            <button
+              onClick={() => onDisconnect("gmail")}
+              style={{ background: "var(--paper-2)", border: "none", borderRadius: 12, padding: "0 14px", fontSize: 13, color: "var(--ink-1)", cursor: "pointer" }}
+            >
+              Disconnect
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Sign out */}
+      <button
+        onClick={handleSignOut}
+        style={{ width: "100%", height: 48, background: "none", border: "1.5px solid var(--paper-2)", borderRadius: 12, fontSize: 14, color: "var(--ink-2)", cursor: "pointer", marginTop: 4 }}
+      >
+        Sign out
+      </button>
+
+      {/* Bank picker modal */}
       {showBankPicker && (
         <div style={S.modalOL} onClick={() => setShowBankPicker(false)}>
           <div style={S.modal} onClick={e => e.stopPropagation()}>
             <div style={S.modalHdr}>
-              <span style={S.modalTitle}>{t("chooseBank")}</span>
+              <span style={S.modalTitle}>Choose your bank</span>
               <button style={S.modalClose} onClick={() => setShowBankPicker(false)}>×</button>
             </div>
+            <p style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 16, lineHeight: 1.5 }}>
+              You'll be redirected to your bank to authorise read-only access.
+            </p>
             {BANKS.map((bank, i) => (
-              <button key={bank.id} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "13px 0", background: "none", border: "none", borderBottom: i < BANKS.length - 1 ? "1px solid var(--border-color)" : "none", cursor: "pointer", textAlign: "left" }}
-                onClick={() => { onConnect("bank", { name: bank.name, info: bank.name }); setShowBankPicker(false); }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: bank.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)" }}>{bank.name}</span>
+              <button
+                key={bank.id}
+                style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "12px 0", background: "none", border: "none", borderBottom: i < BANKS.length - 1 ? "1px solid var(--paper-2)" : "none", cursor: "pointer", textAlign: "left" }}
+                onClick={() => handleBankConnect(bank)}
+              >
+                <BankLogo color={bank.color} name={bank.name} />
+                <span style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-0)" }}>{bank.name}</span>
               </button>
             ))}
           </div>
