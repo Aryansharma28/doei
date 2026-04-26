@@ -41,10 +41,30 @@ export function DocumentUpload({ debtId }) {
     const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
     if (upErr) { setError(upErr.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
-    await supabase.from("documents").insert({ user_id: user.id, debt_id: debtId, file_url: publicUrl, file_name: file.name, file_type: file.type });
+    const { data: insertedRow } = await supabase
+      .from("documents")
+      .insert({ user_id: user.id, debt_id: debtId, file_url: publicUrl, file_name: file.name, file_type: file.type })
+      .select()
+      .single();
     await loadDocs();
     setUploading(false);
     e.target.value = "";
+
+    if (insertedRow?.id) {
+      fetch("/api/document/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileUrl: publicUrl, debtContext: `Document for debt ${debtId}` }),
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(async (data) => {
+          if (data?.analysis) {
+            await supabase.from("documents").update({ extracted_text: data.analysis }).eq("id", insertedRow.id);
+            await loadDocs();
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   return (
