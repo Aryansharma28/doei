@@ -117,12 +117,18 @@ Never call a sommatie or overdue debt "manageable" or "no problem". Be honest an
   }, [debt.id, lang, docs, docsLoaded]);
 
   async function loadDocs() {
+    console.log("[DebtDetail] loadDocs for debt.id=", debt.id);
     const { data, error } = await supabase
       .from("documents")
       .select("*")
       .eq("debt_id", debt.id)
       .order("uploaded_at", { ascending: false });
-    if (!error && data) setDocs(data);
+    if (error) {
+      console.error("[DebtDetail] loadDocs FAILED:", error);
+    } else {
+      console.log("[DebtDetail] loadDocs returned", data?.length ?? 0, "docs:", data);
+      if (data) setDocs(data);
+    }
     setDocsLoaded(true);
   }
 
