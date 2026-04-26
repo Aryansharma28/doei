@@ -25,25 +25,27 @@ const gmailServerPath = fileURLToPath(
   new URL("../node_modules/@cablate/mcp-gmail/dist/index.cjs", import.meta.url)
 );
 
-export const hasGmailMcpConfig = Boolean(
-  process.env.GMAIL_CLIENT_ID &&
-    process.env.GMAIL_CLIENT_SECRET &&
-    process.env.GMAIL_REFRESH_TOKEN
+export const hasGmailOAuthConfig = Boolean(
+  process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET
 );
 
-export const gmailMcp = hasGmailMcpConfig
-  ? new MCPClient({
-      id: "gmail-mcp",
-      servers: {
-        gmail: {
-          command: "node",
-          args: [gmailServerPath],
-          env: {
-            GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID!,
-            GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET!,
-            GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN!,
-          },
+export function createGmailMcpClient(refreshToken: string) {
+  if (!hasGmailOAuthConfig) {
+    throw new Error("Gmail OAuth app credentials are not configured");
+  }
+
+  return new MCPClient({
+    id: `gmail-mcp-${refreshToken.slice(0, 8)}`,
+    servers: {
+      gmail: {
+        command: "node",
+        args: [gmailServerPath],
+        env: {
+          GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID!,
+          GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET!,
+          GMAIL_REFRESH_TOKEN: refreshToken,
         },
       },
-    })
-  : null;
+    },
+  });
+}

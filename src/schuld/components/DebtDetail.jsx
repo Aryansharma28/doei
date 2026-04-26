@@ -34,7 +34,7 @@ function LoadingDots() {
   );
 }
 
-export function DebtDetail({ debt, income = [], onBack, onDelete }) {
+export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, bankName, onMarkPaid }) {
   const { t, lang, fmtDate } = useLang();
   const c = getCreditor(debt.creditorType);
   const s = getStageData(debt.stage);
@@ -48,6 +48,8 @@ export function DebtDetail({ debt, income = [], onBack, onDelete }) {
   const [actionLoading, setActionLoading] = useState(true);
   const [summaryContent, setSummaryContent] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [showPayConfirm, setShowPayConfirm] = useState(false);
+  const [paySuccess, setPaySuccess] = useState(false);
 
   useEffect(() => { loadDocs(); }, [debt.id]);
 
@@ -123,8 +125,49 @@ export function DebtDetail({ debt, income = [], onBack, onDelete }) {
         </span>
       </div>
 
-      {/* iDEAL pay button */}
-      <PayButton debt={debt} creditor={c} lang={lang} t={t} />
+      {/* Pay button */}
+      <PayButton
+        debt={debt}
+        creditor={c}
+        lang={lang}
+        t={t}
+        bankBalance={bankBalance}
+        bankName={bankName}
+        onBankPay={() => setShowPayConfirm(true)}
+      />
+
+      {/* Payment confirmation sheet */}
+      {showPayConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }} onClick={() => setShowPayConfirm(false)}>
+          <div style={{ background: "var(--paper-0)", borderRadius: "24px 24px 0 0", padding: "28px 24px 44px", width: "100%", maxWidth: 480, boxSizing: "border-box" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink-0)", marginBottom: 6 }}>Confirm payment</div>
+            <div style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 24 }}>
+              Send <strong style={{ color: "var(--ink-0)" }}>{fmt(debt.amount)}</strong> to <strong style={{ color: "var(--ink-0)" }}>{debt.creditorName}</strong><br />
+              From {bankName} · {fmt(bankBalance)} available
+            </div>
+            <button
+              onClick={() => { setShowPayConfirm(false); setPaySuccess(true); setTimeout(() => onMarkPaid(debt.id), 1600); }}
+              style={{ width: "100%", height: 52, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 16, fontWeight: 700, cursor: "pointer", marginBottom: 12 }}
+            >
+              Confirm →
+            </button>
+            <button onClick={() => setShowPayConfirm(false)} style={{ width: "100%", height: 44, background: "none", color: "var(--ink-2)", border: "none", fontSize: 14, cursor: "pointer" }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Payment success overlay */}
+      {paySuccess && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+          <div style={{ background: "var(--paper-0)", borderRadius: 24, padding: "36px 32px", textAlign: "center", margin: 24, maxWidth: 320 }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--stable-bg)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 28 }}>✓</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--ink-0)", marginBottom: 8 }}>Payment sent</div>
+            <div style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.6 }}>{fmt(debt.amount)} to {debt.creditorName}</div>
+          </div>
+        </div>
+      )}
 
       {/* AI Summary */}
       <div style={S.card}>
@@ -208,17 +251,37 @@ export function DebtDetail({ debt, income = [], onBack, onDelete }) {
   );
 }
 
-function PayButton({ debt, creditor, lang, t }) {
-  const paymentUrl = creditor.paymentUrl;
+function PayButton({ debt, creditor, lang, t, bankBalance, bankName, onBankPay }) {
+  if (bankBalance != null && bankName) {
+    const canAfford = bankBalance >= debt.amount;
+    return (
+      <button
+        onClick={canAfford ? onBankPay : undefined}
+        disabled={!canAfford}
+        style={{
+          ...payBtnStyle,
+          background: canAfford ? "var(--accent)" : "var(--paper-2)",
+          color: canAfford ? "white" : "var(--ink-2)",
+          cursor: canAfford ? "pointer" : "default",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 4,
+        }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 700 }}>
+          {canAfford ? `Pay ${fmt(debt.amount)} now` : "Insufficient balance"}
+        </span>
+        <span style={{ fontSize: 12, opacity: 0.75 }}>
+          {bankName} · {fmt(bankBalance)} available
+        </span>
+      </button>
+    );
+  }
 
+  const paymentUrl = creditor.paymentUrl;
   if (paymentUrl) {
     return (
-      <a
-        href={paymentUrl}
-        target="_blank"
-        rel="noreferrer"
-        style={payBtnStyle}
-      >
+      <a href={paymentUrl} target="_blank" rel="noreferrer" style={payBtnStyle}>
         <IDealLogo />
         <span style={{ flex: 1 }}>{lang === "nl" ? `Betaal ${fmt(debt.amount)} via iDEAL` : `Pay ${fmt(debt.amount)} with iDEAL`}</span>
         <span style={{ fontSize: 16 }}>↗</span>

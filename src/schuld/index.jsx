@@ -14,6 +14,26 @@ import { DEMO_DEBTS, DEMO_INCOME } from "./constants/demoData";
 import { getCreditor, getStageData } from "./constants/creditors";
 import { supabase } from "../lib/supabase";
 
+const PENDING_GMAIL_OAUTH_KEY = "doei-pending-gmail-oauth";
+
+function mergeSuggestedDebts(existing, incoming) {
+  const current = existing || [];
+  const next = [...current];
+  const seen = new Set(
+    current.map(item => item.email_id || `${item.creditor_name}-${item.transaction_date}-${item.amount}`)
+  );
+
+  for (const item of incoming || []) {
+    const key = item.email_id || `${item.creditor_name}-${item.transaction_date}-${item.amount}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      next.unshift(item);
+    }
+  }
+
+  return next;
+}
+
 /* ── doei wordmark — X-mark + serif "doei" ─────────────── */
 const DoeiLogo = ({ size = 22 }) => (
   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -80,14 +100,130 @@ export default function SchuldOverzicht() {
   const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
   const [connections, setConnections] = useState({});
   const [suggestedDebts, setSuggestedDebts] = useState([]);
+  const [gmailBusy, setGmailBusy] = useState(false);
+  const [gmailMessage, setGmailMessage] = useState("");
+  const [gmailError, setGmailError] = useState("");
   const scanRef = useRef();
 
   // Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSession(session);
+
+      if (session?.provider_refresh_token) {
+        sessionStorage.setItem(
+          PENDING_GMAIL_OAUTH_KEY,
+          JSON.stringify({
+            providerEmail: session.user?.email || "",
+            providerRefreshToken: session.provider_refresh_token,
+            providerToken: session.provider_token || null,
+          })
+        );
+      }
+    });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gmail")) {
+      setScreen("account");
+      params.delete("gmail");
+      const next = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshGmailState() {
+      const authHeaders = {
+        Authorization: `Bearer ${session.access_token}`,
+      };
+
+      try {
+        const statusRes = await fetch("/api/gmail/status", {
+          headers: authHeaders,
+        });
+        const statusData = await statusRes.json();
+        if (!cancelled) {
+          if (statusRes.ok && statusData.connected) {
+            connectIntegration("gmail", {
+              name: "Gmail",
+              info: statusData.email || session.user?.email || "Connected",
+              status: statusData.status || "connected",
+            });
+          } else {
+            disconnectIntegration("gmail");
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setGmailError("Could not load Gmail connection status");
+        }
+      }
+
+      const pendingRaw = sessionStorage.getItem(PENDING_GMAIL_OAUTH_KEY);
+      if (!pendingRaw) {
+        return;
+      }
+
+      try {
+        const pending = JSON.parse(pendingRaw);
+        setGmailBusy(true);
+        setGmailError("");
+        setGmailMessage("Finishing Gmail connection…");
+
+        const connectRes = await fetch("/api/gmail/connect", {
+          method: "POST",
+          headers: {
+            ...authHeaders,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(pending),
+        });
+        const connectData = await connectRes.json();
+        if (!connectRes.ok || connectData.error) {
+          throw new Error(connectData.error || "Failed to connect Gmail");
+        }
+
+        sessionStorage.removeItem(PENDING_GMAIL_OAUTH_KEY);
+        if (!cancelled) {
+          connectIntegration("gmail", {
+            name: "Gmail",
+            info: connectData.email || session.user?.email || "Connected",
+            status: "connected",
+          });
+          setGmailMessage("Gmail connected. Morning sync is ready.");
+          setScreen("account");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setGmailError(error.message || "Failed to connect Gmail");
+        }
+      } finally {
+        if (!cancelled) {
+          setGmailBusy(false);
+        }
+      }
+    }
+
+    refreshGmailState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
 
   useLayoutEffect(() => {
@@ -152,10 +288,99 @@ export default function SchuldOverzicht() {
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); setScanInitData(null); };
   const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
+  const markDebtPaid = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); setScreen("dashboard"); };
   const connectIntegration = (id, data) => setConnections(prev => ({ ...prev, [id]: data }));
   const disconnectIntegration = (id) => setConnections(prev => { const n = { ...prev }; delete n[id]; return n; });
   const acceptSuggested = (s) => { addDebt({ creditorName: s.creditor_name, creditorType: s.creditor_type, amount: s.amount, originalAmount: s.amount, dueDate: s.transaction_date, stage: "warning", notes: s.description }); setSuggestedDebts(prev => prev.filter(x => x !== s)); };
   const dismissSuggested = (s) => setSuggestedDebts(prev => prev.filter(x => x !== s));
+  const connectGmail = async () => {
+    setGmailBusy(true);
+    setGmailError("");
+    setGmailMessage("");
+
+    const { error } = await supabase.auth.linkIdentity({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/app?gmail=callback`,
+        scopes: "openid email profile https://www.googleapis.com/auth/gmail.readonly",
+        queryParams: {
+          access_type: "offline",
+          include_granted_scopes: "true",
+          prompt: "consent",
+        },
+      },
+    });
+
+    if (error) {
+      setGmailBusy(false);
+      setGmailError(error.message);
+    }
+  };
+  const syncGmail = async () => {
+    if (!session?.access_token) {
+      return;
+    }
+
+    setGmailBusy(true);
+    setGmailError("");
+    setGmailMessage("");
+
+    try {
+      const res = await fetch("/api/gmail/sync", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to sync Gmail");
+      }
+
+      connectIntegration("gmail", {
+        ...(connections.gmail || { name: "Gmail", info: session.user?.email || "Connected" }),
+        status: "connected",
+      });
+      setSuggestedDebts(prev => mergeSuggestedDebts(prev, data.suggested));
+      setGmailMessage(
+        data.suggested?.length
+          ? `Found ${data.suggested.length} debt-related ${data.suggested.length === 1 ? "email" : "emails"}`
+          : "No debt-related emails found in the latest sync"
+      );
+    } catch (error) {
+      setGmailError(error.message || "Failed to sync Gmail");
+    } finally {
+      setGmailBusy(false);
+    }
+  };
+  const disconnectGmail = async () => {
+    if (!session?.access_token) {
+      return;
+    }
+
+    setGmailBusy(true);
+    setGmailError("");
+
+    try {
+      const res = await fetch("/api/gmail/disconnect", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to disconnect Gmail");
+      }
+
+      disconnectIntegration("gmail");
+      setGmailMessage("Gmail disconnected.");
+    } catch (error) {
+      setGmailError(error.message || "Failed to disconnect Gmail");
+    } finally {
+      setGmailBusy(false);
+    }
+  };
 
   const handleScan = async (e) => {
     const file = e.target.files?.[0];
@@ -238,11 +463,11 @@ export default function SchuldOverzicht() {
 
         {/* ── Main content ── */}
         <main style={S.main}>
-          {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
-          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
+          {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} bankBalance={connections.bank?.balance ?? null} bankName={connections.bank?.name ?? null} />}
+          {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} bankBalance={connections.bank?.balance ?? null} bankName={connections.bank?.name ?? null} onMarkPaid={markDebtPaid} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
-          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} session={session} suggestedDebts={suggestedDebts} onAcceptSuggested={acceptSuggested} onDismissSuggested={dismissSuggested} onSuggest={setSuggestedDebts} />}
+          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} onConnectGmail={connectGmail} onSyncGmail={syncGmail} onDisconnectGmail={disconnectGmail} gmailBusy={gmailBusy} gmailMessage={gmailMessage} gmailError={gmailError} session={session} suggestedDebts={suggestedDebts} onAcceptSuggested={acceptSuggested} onDismissSuggested={dismissSuggested} onSuggest={setSuggestedDebts} />}
         </main>
 
         <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />

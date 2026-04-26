@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { syncDebtEmails } from "../../backend/gmail-sync.js";
-import { hasGmailMcpConfig } from "../../backend/mcp.js";
+import { syncAllGmailConnections } from "../../backend/gmail-sync.js";
 
 function isAuthorized(req: VercelRequest) {
   const secret = process.env.CRON_SECRET;
@@ -15,20 +14,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).end();
   if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
 
-  if (!hasGmailMcpConfig) {
-    return res.status(500).json({ error: "Gmail MCP is not configured" });
-  }
-
   try {
-    const result = await syncDebtEmails({
-      userId: process.env.GMAIL_SYNC_USER_ID,
+    const result = await syncAllGmailConnections({
       query: process.env.GMAIL_MCP_QUERY,
     });
 
     res.json({
       ok: true,
       checkedAt: new Date().toISOString(),
-      matched: result.suggested.length,
+      connections: result.connections,
+      matched: result.matched,
       stored: result.stored,
     });
   } catch (err: any) {

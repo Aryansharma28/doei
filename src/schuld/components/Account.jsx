@@ -5,14 +5,14 @@ import { supabase } from "../../lib/supabase";
 import { fmt } from "../utils/helpers";
 
 const BANKS = [
-  { id: "ING_INGBNL2A",    name: "ING",        color: "#FF6200" },
-  { id: "ABNANL2A",        name: "ABN AMRO",   color: "#007B5E" },
-  { id: "RABONL2U",        name: "Rabobank",   color: "#CC0000" },
-  { id: "SNSBNL2A",        name: "SNS Bank",   color: "#F28C00" },
-  { id: "ASNBNL21",        name: "ASN Bank",   color: "#005C3E" },
-  { id: "TRIONL2U",        name: "Triodos",    color: "#006837" },
-  { id: "BUNQNL2A",        name: "bunq",       color: "#3AABF0" },
-  { id: "REVOLT21",        name: "Revolut",    color: "#191C1F" },
+  { id: "ING_INGBNL2A",    name: "ING",        color: "#FF6200", balance: 1240 },
+  { id: "ABNANL2A",        name: "ABN AMRO",   color: "#007B5E", balance: 2180 },
+  { id: "RABONL2U",        name: "Rabobank",   color: "#CC0000", balance: 847  },
+  { id: "SNSBNL2A",        name: "SNS Bank",   color: "#F28C00", balance: 1560 },
+  { id: "ASNBNL21",        name: "ASN Bank",   color: "#005C3E", balance: 3200 },
+  { id: "TRIONL2U",        name: "Triodos",    color: "#006837", balance: 920  },
+  { id: "BUNQNL2A",        name: "bunq",       color: "#3AABF0", balance: 450  },
+  { id: "REVOLT21",        name: "Revolut",    color: "#191C1F", balance: 780  },
 ];
 
 function BankLogo({ color, name }) {
@@ -94,7 +94,7 @@ export function Account({
         { creditor_name: "Vattenfall", creditor_type: "energie", amount: 67.80, transaction_date: "2026-03-10", description: "Jaarafrekening gas/stroom" },
         { creditor_name: "Ymere", creditor_type: "huur", amount: 198, transaction_date: "2026-03-05", description: "Huurachterstand maart" },
       ];
-      onConnect("bank", { name: bank.name, info: bank.name });
+      onConnect("bank", { name: bank.name, info: bank.name, balance: bank.balance });
       onSuggest(suggested);
     } catch (err) {
       setConnectError(err.message);
@@ -114,7 +114,7 @@ export function Account({
       {suggestedDebts.length > 0 && (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-0)", marginBottom: 10 }}>
-            Found in your bank history: {suggestedDebts.length} possible {suggestedDebts.length === 1 ? "debt" : "debts"}
+            Detected automatically: {suggestedDebts.length} possible {suggestedDebts.length === 1 ? "debt" : "debts"}
           </div>
           {suggestedDebts.map((s, i) => (
             <SuggestedDebtCard key={i} s={s} onAccept={onAcceptSuggested} onDismiss={onDismissSuggested} />

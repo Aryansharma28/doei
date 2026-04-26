@@ -43,7 +43,7 @@ function StageChip({ stage, label }) {
   );
 }
 
-export function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notifications, onViewDebt, onNavigate }) {
+export function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, notifications, onViewDebt, onNavigate, bankBalance, bankName }) {
   const { t, fmtDate } = useLang();
   const [filter, setFilter] = useState(null);
 
@@ -95,6 +95,12 @@ export function Dashboard({ debts, totalDebt, escalationCost, monthlyIncome, not
                 <span style={S.heroMetaItem}>
                   <CalIcon />
                   {dueThisWeek} {t("dueThisWeek") || "due this week"}
+                </span>
+              )}
+              {bankBalance != null && bankName && (
+                <span style={{ ...S.heroMetaItem, color: "rgba(255,255,255,0.7)" }}>
+                  <WalletIcon />
+                  {fmt(bankBalance)} in {bankName}
                 </span>
               )}
             </div>
@@ -168,6 +174,11 @@ const BankIcon = () => (
 const CalIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" />
+  </svg>
+);
+const WalletIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 11h.01M2 7l10-5 10 5" />
   </svg>
 );
 const SparkIcon = () => (
