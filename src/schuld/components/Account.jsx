@@ -70,7 +70,6 @@ export function Account({
   suggestedDebts = [],
   onAcceptSuggested,
   onDismissSuggested,
-  onSuggest,
 }) {
   const { t } = useLang();
   const [form, setForm] = useState(profile);
@@ -87,16 +86,7 @@ export function Account({
     setConnectError("");
     try {
       await new Promise(r => setTimeout(r, 1800));
-      const suggested = [
-        { creditor_name: "Belastingdienst", creditor_type: "belasting", amount: 312, transaction_date: "2026-04-01", description: "Inkomstenbelasting 2024" },
-        { creditor_name: "Klarna", creditor_type: "klarna", amount: 89.50, transaction_date: "2026-03-28", description: "3x gespreide betaling webshop" },
-        { creditor_name: "CJIB", creditor_type: "cjib", amount: 156, transaction_date: "2026-03-20", description: "Verkeersboete A10" },
-        { creditor_name: "DUO", creditor_type: "duo", amount: 234, transaction_date: "2026-03-15", description: "Studieschuld terugbetaling" },
-        { creditor_name: "Vattenfall", creditor_type: "energie", amount: 67.80, transaction_date: "2026-03-10", description: "Jaarafrekening gas/stroom" },
-        { creditor_name: "Ymere", creditor_type: "huur", amount: 198, transaction_date: "2026-03-05", description: "Huurachterstand maart" },
-      ];
       onConnect("bank", { name: bank.name, info: bank.name, balance: bank.balance });
-      onSuggest(suggested);
     } catch (err) {
       setConnectError(err.message);
     } finally {
@@ -183,7 +173,7 @@ export function Account({
                 <span style={{ color: "var(--stable-fg)" }}>{fmt(connections.bank?.balance)} available</span>
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}>Scan transactions for debts</div>
+              <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}>Show your available balance</div>
             )}
           </div>
           {bankConnected ? (
@@ -255,7 +245,7 @@ export function Account({
               <button style={S.modalClose} onClick={() => setShowBankPicker(false)}>×</button>
             </div>
             <p style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 18, lineHeight: 1.5 }}>
-              We'll scan recent transactions to surface debt repayments as suggestions.
+              We'll show your available balance so you know what you can put toward debts.
             </p>
             {BANKS.map((bank, i) => (
               <button

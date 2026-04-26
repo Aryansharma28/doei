@@ -467,7 +467,7 @@ export default function SchuldOverzicht() {
           {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} bankBalance={connections.bank?.balance ?? null} bankName={connections.bank?.name ?? null} onMarkPaid={markDebtPaid} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
           {screen === "alerts" && <Alerts notifications={notifications} onViewDebt={(id) => { setSelectedDebt(debts.find(d => d.id === id)); setScreen("detail"); }} />}
-          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} onConnectGmail={connectGmail} onSyncGmail={syncGmail} onDisconnectGmail={disconnectGmail} gmailBusy={gmailBusy} gmailMessage={gmailMessage} gmailError={gmailError} session={session} suggestedDebts={suggestedDebts} onAcceptSuggested={acceptSuggested} onDismissSuggested={dismissSuggested} onSuggest={setSuggestedDebts} />}
+          {screen === "account" && <Account profile={profile} onSaveProfile={setProfile} connections={connections} onConnect={connectIntegration} onDisconnect={disconnectIntegration} onConnectGmail={connectGmail} onSyncGmail={syncGmail} onDisconnectGmail={disconnectGmail} gmailBusy={gmailBusy} gmailMessage={gmailMessage} gmailError={gmailError} session={session} suggestedDebts={suggestedDebts} onAcceptSuggested={acceptSuggested} onDismissSuggested={dismissSuggested} />}
         </main>
 
         <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />
