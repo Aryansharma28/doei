@@ -1,0 +1,145 @@
+[
+  {
+    "file": "01_belastingdienst.pdf",
+    "template": "government",
+    "creditorType": "belasting",
+    "creditorName": "Belastingdienst",
+    "amount": 1247.5,
+    "originalAmount": 1247.5,
+    "dueDate": "2026-05-03",
+    "stage": "action_needed",
+    "notes": "Aanslag IB 2024 — eerste betaalmoment"
+  },
+  {
+    "file": "02_cjib.pdf",
+    "template": "cjib",
+    "creditorType": "cjib",
+    "creditorName": "CJIB",
+    "amount": 298.0,
+    "originalAmount": 189.0,
+    "dueDate": "2026-05-01",
+    "stage": "action_needed",
+    "notes": "Snelheidsovertreding A12 — al verhoogd met 50%"
+  },
+  {
+    "file": "03_duo.pdf",
+    "template": "government",
+    "creditorType": "duo",
+    "creditorName": "DUO",
+    "amount": 127.5,
+    "originalAmount": 127.5,
+    "dueDate": "2026-05-10",
+    "stage": "warning",
+    "notes": "Aflossing studieschuld — maandtermijn"
+  },
+  {
+    "file": "04_cak.pdf",
+    "template": "government",
+    "creditorType": "cak",
+    "creditorName": "CAK",
+    "amount": 387.45,
+    "originalAmount": 387.45,
+    "dueDate": "2026-05-17",
+    "stage": "warning",
+    "notes": "Wmo eigen bijdrage Q4 2025"
+  },
+  {
+    "file": "05_zilveren_kruis.pdf",
+    "template": "insurance",
+    "creditorType": "zorg",
+    "creditorName": "Zilveren Kruis",
+    "amount": 312.0,
+    "originalAmount": 234.0,
+    "dueDate": "2026-04-28",
+    "stage": "action_needed",
+    "notes": "Zorgpremie jan + feb achterstand — risico CAK-melding"
+  },
+  {
+    "file": "06_eneco.pdf",
+    "template": "utility",
+    "creditorType": "energie",
+    "creditorName": "Eneco",
+    "amount": 189.34,
+    "originalAmount": 189.34,
+    "dueDate": "2026-05-06",
+    "stage": "warning",
+    "notes": "Jaarafrekening — bijbetaling"
+  },
+  {
+    "file": "07_woonstad.pdf",
+    "template": "housing",
+    "creditorType": "huur",
+    "creditorName": "Woonstad Rotterdam",
+    "amount": 825.0,
+    "originalAmount": 825.0,
+    "dueDate": "2026-04-29",
+    "stage": "action_needed",
+    "notes": "Maand 1 huurachterstand — escalatierisico"
+  },
+  {
+    "file": "08_vitens.pdf",
+    "template": "utility",
+    "creditorType": "water",
+    "creditorName": "Vitens",
+    "amount": 98.2,
+    "originalAmount": 98.2,
+    "dueDate": "2026-05-14",
+    "stage": "warning",
+    "notes": "Waterrekening Q4"
+  },
+  {
+    "file": "09_kpn.pdf",
+    "template": "utility",
+    "creditorType": "telecom",
+    "creditorName": "KPN",
+    "amount": 76.5,
+    "originalAmount": 76.5,
+    "dueDate": "2026-05-08",
+    "stage": "stable",
+    "notes": "Mobiel + internet abonnement"
+  },
+  {
+    "file": "10_ing.pdf",
+    "template": "bank",
+    "creditorType": "bank",
+    "creditorName": "ING Bank",
+    "amount": 215.0,
+    "originalAmount": 215.0,
+    "dueDate": "2026-05-04",
+    "stage": "warning",
+    "notes": "Gestorneerde lening termijn — BKR-risico"
+  },
+  {
+    "file": "11_klarna.pdf",
+    "template": "bnpl",
+    "creditorType": "klarna",
+    "creditorName": "Klarna",
+    "amount": 124.99,
+    "originalAmount": 124.99,
+    "dueDate": "2026-04-30",
+    "stage": "warning",
+    "notes": "BNPL bol.com aankoop"
+  },
+  {
+    "file": "12_intrum.pdf",
+    "template": "collector",
+    "creditorType": "incasso",
+    "creditorName": "Intrum Nederland",
+    "amount": 445.0,
+    "originalAmount": 312.0,
+    "dueDate": "2026-04-27",
+    "stage": "action_needed",
+    "notes": "T-Mobile vordering doorgezet — laatste sommatie"
+  },
+  {
+    "file": "13_gemeente_amsterdam.pdf",
+    "template": "government",
+    "creditorType": "gemeente",
+    "creditorName": "Gemeente Amsterdam",
+    "amount": 67.0,
+    "originalAmount": 67.0,
+    "dueDate": "2026-05-11",
+    "stage": "stable",
+    "notes": "Parkeerbon Prinsengracht"
+  }
+]

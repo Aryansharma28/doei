@@ -35,11 +35,13 @@ export function DocumentUpload({ debtId }) {
     if (!file) return;
     setUploading(true);
     setError(null);
-    const path = `${debtId}/${Date.now()}_${file.name}`;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError("Not signed in"); setUploading(false); return; }
+    const path = `${user.id}/${debtId}/${Date.now()}_${file.name}`;
     const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
     if (upErr) { setError(upErr.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
-    await supabase.from("documents").insert({ debt_id: debtId, file_url: publicUrl, file_name: file.name, file_type: file.type });
+    await supabase.from("documents").insert({ user_id: user.id, debt_id: debtId, file_url: publicUrl, file_name: file.name, file_type: file.type });
     await loadDocs();
     setUploading(false);
     e.target.value = "";
