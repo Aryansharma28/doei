@@ -95,7 +95,7 @@ function PayPlanCard({ items, lang }) {
         }}
       >
         <IDealLogo />
-        {lang === "nl" ? "Ga ervoor — open betalingen" : "Go for it — open payments"}
+        {lang === "nl" ? "Ga ervoor" : "Go for it"}
       </button>
     </div>
   );
