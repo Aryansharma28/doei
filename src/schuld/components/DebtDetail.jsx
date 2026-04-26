@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { S } from "../styles/styles";
 import { fmt } from "../utils/helpers";
 import { useLang } from "../hooks/useLang";
@@ -136,9 +137,9 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
         onBankPay={() => setShowPayConfirm(true)}
       />
 
-      {/* Payment confirmation sheet */}
-      {showPayConfirm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }} onClick={() => setShowPayConfirm(false)}>
+      {/* Payment confirmation sheet — portalled to body to escape stacking context */}
+      {showPayConfirm && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowPayConfirm(false)}>
           <div style={{ background: "var(--paper-0)", borderRadius: "24px 24px 0 0", padding: "28px 24px 44px", width: "100%", maxWidth: 480, boxSizing: "border-box" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink-0)", marginBottom: 6 }}>Confirm payment</div>
             <div style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 24 }}>
@@ -155,18 +156,20 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
               Cancel
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Payment success overlay */}
-      {paySuccess && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+      {paySuccess && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
           <div style={{ background: "var(--paper-0)", borderRadius: 24, padding: "36px 32px", textAlign: "center", margin: 24, maxWidth: 320 }}>
             <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--stable-bg)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 28 }}>✓</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: "var(--ink-0)", marginBottom: 8 }}>Payment sent</div>
             <div style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.6 }}>{fmt(debt.amount)} to {debt.creditorName}</div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* AI Summary */}
