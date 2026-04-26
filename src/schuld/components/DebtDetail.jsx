@@ -5,6 +5,8 @@ import { useLang } from "../hooks/useLang";
 import { getCreditor, getStageData } from "../constants/creditors";
 import { supabase } from "../../lib/supabase";
 
+const FAST_MODEL = "claude-haiku-4-5";
+
 async function fetchAIText(systemPrompt, userContent) {
   const response = await fetch("/api/advisor", {
     method: "POST",
@@ -12,6 +14,7 @@ async function fetchAIText(systemPrompt, userContent) {
     body: JSON.stringify({
       systemPrompt,
       messages: [{ role: "user", content: userContent }],
+      model: FAST_MODEL,
     }),
   });
   if (!response.ok) return "";
