@@ -297,8 +297,8 @@ export function VoiceCallModal({ debts, income, lang, firstName, onClose }) {
               key={i}
               style={{
                 alignSelf: line.who === "user" ? "flex-end" : "flex-start",
-                background: line.who === "user" ? "var(--accent, #0070f3)" : "white",
-                color: line.who === "user" ? "white" : "var(--text-primary, #000)",
+                background: line.who === "user" ? "var(--accent, #0070f3)" : "#111",
+                color: "white",
                 padding: "8px 12px",
                 borderRadius: 12,
                 maxWidth: "80%",
