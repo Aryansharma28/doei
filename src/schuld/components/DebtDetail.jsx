@@ -6,18 +6,19 @@ import { getCreditor, getStageData } from "../constants/creditors";
 import { supabase } from "../../lib/supabase";
 
 async function fetchAIText(systemPrompt, userContent) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("/api/advisor", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 400,
-      system: systemPrompt,
+      systemPrompt,
       messages: [{ role: "user", content: userContent }],
     }),
   });
+  if (!response.ok) return "";
   const data = await response.json();
-  return data.content?.map(i => i.text || "").join("") || "";
+  const text = data.reply || "";
+  // Hard-cap: take only the first sentence
+  return text.split(/(?<=[.!?])\s/)[0] || text;
 }
 
 function LoadingDots() {
@@ -30,11 +31,12 @@ function LoadingDots() {
   );
 }
 
-export function DebtDetail({ debt, onBack, onDelete }) {
+export function DebtDetail({ debt, income = [], onBack, onDelete }) {
   const { t, lang, fmtDate } = useLang();
   const c = getCreditor(debt.creditorType);
   const s = getStageData(debt.stage);
   const collectionFees = debt.amount - debt.originalAmount;
+  const monthlyIncome = income.reduce((sum, i) => sum + i.amount, 0);
 
   const [docs, setDocs] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -50,43 +52,44 @@ export function DebtDetail({ debt, onBack, onDelete }) {
     let cancelled = false;
     setActionLoading(true);
     setActionContent(null);
-    const debtCtx = buildDebtContext(debt, c, s, collectionFees);
     const language = lang === "nl" ? "Dutch" : "English";
+    const incomeSummary = income.length > 0
+      ? income.map(i => `${i.label}: €${i.amount}/month`).join(", ")
+      : "unknown";
     fetchAIText(
-      `You are a debt management assistant helping someone in the Netherlands. Respond in ${language}. Give 3-4 concrete action items for this specific debt. Format as a numbered list (1. 2. 3.). No markdown bold, no headers. Start each item with a verb, keep it to 1-2 sentences. Be specific.`,
-      debtCtx
+      `Respond in ${language}. One sentence, max 15 words: the single most important action for this debt right now. Be specific.`,
+      buildDebtContext(debt, c, s, collectionFees, monthlyIncome)
     ).then(text => {
       if (!cancelled) { setActionContent(text); setActionLoading(false); }
     }).catch(() => {
       if (!cancelled) { setActionContent(""); setActionLoading(false); }
     });
     return () => { cancelled = true; };
-  }, [debt.id]);
+  }, [debt.id, lang]);
 
   useEffect(() => {
     let cancelled = false;
     setSummaryLoading(true);
     setSummaryContent(null);
-    const debtCtx = buildDebtContext(debt, c, s, collectionFees);
     const language = lang === "nl" ? "Dutch" : "English";
     fetchAIText(
-      `You are a debt management assistant helping someone in the Netherlands. Respond in ${language}. Write a 2-3 sentence plain-language summary of this debt: what it is, how serious it is, and what the person most needs to know. No markdown. No lists. Plain text only.`,
-      debtCtx
+      `Respond in ${language}. One sentence, max 15 words: what this debt is and how urgent it is.`,
+      buildDebtContext(debt, c, s, collectionFees, monthlyIncome)
     ).then(text => {
       if (!cancelled) { setSummaryContent(text); setSummaryLoading(false); }
     }).catch(() => {
       if (!cancelled) { setSummaryContent(""); setSummaryLoading(false); }
     });
     return () => { cancelled = true; };
-  }, [debt.id]);
+  }, [debt.id, lang]);
 
   async function loadDocs() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("documents")
       .select("*")
       .eq("debt_id", debt.id)
       .order("uploaded_at", { ascending: false });
-    if (data) setDocs(data);
+    if (!error && data) setDocs(data);
   }
 
   async function handleUpload(e) {
@@ -108,26 +111,19 @@ export function DebtDetail({ debt, onBack, onDelete }) {
     <div style={S.sc} className="doei-sc screen-in">
       <button style={S.backBtn} onClick={onBack}>{t("back")}</button>
 
-      {/* Header: organization, outstanding amount, stage — no icon */}
       <div style={S.debtDetailHero}>
         <h2 style={S.detailName}>{debt.creditorName}</h2>
-        <div style={S.detailHeroAmt}>{fmt(debt.amount)}</div>
-        <span style={{ ...S.stagePill, backgroundColor: s.color + "22", color: s.color, fontSize: 13, padding: "5px 14px" }}>{t(s.labelKey)}</span>
+        <div style={S.detailHeroAmt} className="tabular">{fmt(debt.amount)}</div>
+        <span style={{ ...S.stageChip, color: s.color, background: s.bg, fontSize: 12, padding: "4px 10px" }}>
+          <span style={{ ...S.stageChipDot, background: s.color }} />
+          {t(s.labelKey)}
+        </span>
       </div>
 
-      {/* TODO: AI Action Items — connect to real AI-generated content */}
-      <div style={S.card}>
-        <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiActionItems")}</div>
-        {actionLoading ? <LoadingDots /> : (
-          <div style={{ fontSize: 14, lineHeight: 1.65, color: "var(--text-primary)" }}>
-            {(actionContent || "").split("\n").filter(l => l.trim()).map((line, i, arr) => (
-              <div key={i} style={{ marginBottom: i < arr.length - 1 ? 10 : 0 }}>{line}</div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* iDEAL pay button */}
+      <PayButton debt={debt} creditor={c} lang={lang} t={t} />
 
-      {/* TODO: AI Summary — connect to real AI-generated content */}
+      {/* AI Summary */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiSummary")}</div>
         {summaryLoading ? <LoadingDots /> : (
@@ -139,10 +135,22 @@ export function DebtDetail({ debt, onBack, onDelete }) {
         )}
       </div>
 
+      {/* AI Action Items */}
+      <div style={S.card}>
+        <div style={{ ...S.cardTitle, marginBottom: 12 }}>{t("aiActionItems")}</div>
+        {actionLoading ? <LoadingDots /> : (
+          <div style={{ fontSize: 14, lineHeight: 1.65, color: "var(--text-primary)" }}>
+            {(actionContent || "").split("\n").filter(l => l.trim()).map((line, i, arr) => (
+              <div key={i} style={{ marginBottom: i < arr.length - 1 ? 10 : 0 }}>{line}</div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Financial breakdown */}
       <div style={S.card}>
         <div style={S.dRow}><span style={S.dLabel}>{t("originalAmount")}</span><span>{fmt(debt.originalAmount)}</span></div>
-        <div style={S.dRow}><span style={S.dLabel}>{t("feesInterest")}</span><span style={{ color: collectionFees > 0 ? "#E07A5F" : "inherit" }}>{collectionFees > 0 ? `+${fmt(collectionFees)}` : "—"}</span></div>
+        <div style={S.dRow}><span style={S.dLabel}>{t("feesInterest")}</span><span style={{ color: collectionFees > 0 ? "var(--action-fg)" : "inherit" }}>{collectionFees > 0 ? `+${fmt(collectionFees)}` : "—"}</span></div>
         <div style={S.dRow}><span style={S.dLabel}>{t("outstandingAmount")}</span><span style={{ fontWeight: 700 }}>{fmt(debt.amount)}</span></div>
         <div style={S.dRow}><span style={S.dLabel}>{t("created")}</span><span>{fmtDate(debt.createdAt)}</span></div>
         <div style={S.dRow}><span style={S.dLabel}>{t("dueDate")}</span><span>{fmtDate(debt.dueDate)}</span></div>
@@ -157,8 +165,13 @@ export function DebtDetail({ debt, onBack, onDelete }) {
       {/* Correspondence */}
       <div style={S.card}>
         <div style={{ ...S.cardTitle, marginBottom: 14 }}>{t("correspondence")}</div>
+        <label style={{ ...S.docUploadBtn, marginBottom: docs.length > 0 ? 14 : 0, cursor: uploading ? "not-allowed" : "pointer", opacity: uploading ? 0.6 : 1 }}>
+          {uploading ? t("analyzing") : t("addDocument")}
+          <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+        </label>
+        {uploadError && <div style={{ fontSize: 13, color: "var(--action-fg)", marginBottom: 10 }}>{uploadError}</div>}
         {docs.length > 0 ? (
-          <div style={{ marginTop: 14 }}>
+          <div>
             <div style={S.docTableHdr}>
               <span style={{ flex: 2 }}>{t("docTitle")}</span>
               <span style={{ flex: 1, textAlign: "center" }}>{t("docDate")}</span>
@@ -174,7 +187,7 @@ export function DebtDetail({ debt, onBack, onDelete }) {
                   {fmtDate(doc.uploaded_at?.split("T")[0])}
                 </div>
                 <a href={doc.file_url} target="_blank" rel="noreferrer"
-                  style={{ width: 36, display: "flex", justifyContent: "center", alignItems: "center", color: "#3D405B", fontSize: 16, textDecoration: "none", fontWeight: 700 }}>
+                  style={{ width: 36, display: "flex", justifyContent: "center", alignItems: "center", color: "var(--accent)", fontSize: 16, textDecoration: "none", fontWeight: 700 }}>
                   ↗
                 </a>
               </div>
@@ -192,7 +205,65 @@ export function DebtDetail({ debt, onBack, onDelete }) {
   );
 }
 
-function buildDebtContext(debt, c, s, collectionFees) {
+function PayButton({ debt, creditor, lang, t }) {
+  const paymentUrl = creditor.paymentUrl;
+
+  if (paymentUrl) {
+    return (
+      <a
+        href={paymentUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={payBtnStyle}
+      >
+        <IDealLogo />
+        <span style={{ flex: 1 }}>{lang === "nl" ? `Betaal ${fmt(debt.amount)} via iDEAL` : `Pay ${fmt(debt.amount)} via iDEAL`}</span>
+        <span style={{ fontSize: 16 }}>↗</span>
+      </a>
+    );
+  }
+
+  return (
+    <div style={{ ...payBtnStyle, background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)", cursor: "default" }}>
+      <span style={{ fontSize: 18 }}>🏦</span>
+      <span style={{ flex: 1, fontSize: 13 }}>
+        {lang === "nl"
+          ? "Betaal via uw bank of neem contact op met de schuldeiser"
+          : "Pay via your bank or contact the creditor directly"}
+      </span>
+    </div>
+  );
+}
+
+const payBtnStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  width: "100%",
+  padding: "16px 18px",
+  background: "#003082",
+  color: "white",
+  borderRadius: 14,
+  border: "none",
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: "pointer",
+  textDecoration: "none",
+  marginBottom: 14,
+  boxSizing: "border-box",
+};
+
+function IDealLogo() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="6" fill="white" />
+      <text x="4" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#003082">iD</text>
+      <rect x="19" y="6" width="9" height="20" rx="2" fill="#CC0000" />
+    </svg>
+  );
+}
+
+function buildDebtContext(debt, c, s, collectionFees, monthlyIncome) {
   return [
     `Creditor: ${debt.creditorName} (${c.type})`,
     `Outstanding: €${debt.amount}`,
@@ -200,6 +271,7 @@ function buildDebtContext(debt, c, s, collectionFees) {
     `Fees added: €${collectionFees}`,
     `Stage: ${s.id}`,
     `Due: ${debt.dueDate}`,
+    `Monthly income: €${monthlyIncome}`,
     `Notes: ${debt.notes || "none"}`,
   ].join("\n");
 }
