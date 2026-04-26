@@ -13,48 +13,41 @@ import { DEMO_DEBTS, DEMO_INCOME } from "./constants/demoData";
 import { getCreditor, getStageData } from "./constants/creditors";
 import { supabase } from "../lib/supabase";
 
-const IconHome = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
-  </svg>
+/* ── doei wordmark — X-mark + serif "doei" ─────────────── */
+const DoeiLogo = ({ size = 22 }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M5 6 L19 18" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M19 6 L5 18" stroke="var(--ink-0)" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+    <span style={{
+      fontFamily: "'Instrument Serif', 'Source Serif 4', Georgia, serif",
+      fontSize: Math.round(size * 1.05),
+      fontWeight: 400,
+      letterSpacing: "-0.01em",
+      lineHeight: 1,
+      color: "var(--ink-0)",
+    }}>doei</span>
+  </div>
 );
-const IconCamera = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-  </svg>
-);
-const IconMessage = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-);
-const IconSun = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5"/>
-    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-  </svg>
-);
-const IconMoon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-  </svg>
-);
-const IconUser = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
-  </svg>
-);
-const IconChevron = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="6 9 12 15 18 9"/>
-  </svg>
-);
-const FlagUK = ({ size = 24 }) => (
-  <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 60 40" style={{ borderRadius: 4, flexShrink: 0, display: "block" }}>
+
+const Icon = ({ name, size = 18 }) => {
+  const c = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" };
+  switch (name) {
+    case "home":     return <svg {...c}><path d="M3 11l9-8 9 8" /><path d="M5 9.5V21h14V9.5" /></svg>;
+    case "scan":     return <svg {...c}><path d="M3 8V5a2 2 0 012-2h3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M21 16v3a2 2 0 01-2 2h-3" /><path d="M7 12h10" /></svg>;
+    case "sparkle":  return <svg {...c}><path d="M12 3l1.8 5.5L19 10l-5.2 1.5L12 17l-1.8-5.5L5 10l5.2-1.5L12 3z" /></svg>;
+    case "user":     return <svg {...c}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
+    case "bell":     return <svg {...c}><path d="M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9z" /><path d="M10 21a2 2 0 004 0" /></svg>;
+    case "moon":     return <svg {...c}><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" /></svg>;
+    case "sun":      return <svg {...c}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>;
+    case "chev":     return <svg {...c}><path d="M6 9l6 6 6-6" /></svg>;
+    default: return null;
+  }
+};
+
+const FlagUK = ({ size = 22 }) => (
+  <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 60 40" style={{ borderRadius: 3, flexShrink: 0, display: "block" }}>
     <rect width="60" height="40" fill="#012169"/>
     <path d="M0,0 L60,40 M60,0 L0,40" stroke="white" strokeWidth="9"/>
     <path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="6"/>
@@ -62,8 +55,8 @@ const FlagUK = ({ size = 24 }) => (
     <path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="9"/>
   </svg>
 );
-const FlagNL = ({ size = 24 }) => (
-  <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 60 40" style={{ borderRadius: 4, flexShrink: 0, display: "block" }}>
+const FlagNL = ({ size = 22 }) => (
+  <svg width={size} height={Math.round(size * 0.6)} viewBox="0 0 60 40" style={{ borderRadius: 3, flexShrink: 0, display: "block" }}>
     <rect width="60" height="13.33" fill="#AE1C28"/>
     <rect y="13.33" width="60" height="13.34" fill="white"/>
     <rect y="26.67" width="60" height="13.33" fill="#21468B"/>
@@ -164,10 +157,10 @@ export default function SchuldOverzicht() {
   };
 
   const tabs = [
-    { id: "dashboard", icon: <IconHome />,    lk: "overview" },
-    { id: "upload",    icon: <IconCamera />,  lk: "scan",    action: () => scanRef.current?.click() },
-    { id: "calendar",  icon: <IconMessage />, lk: "advisor"  },
-    { id: "account",   icon: <IconUser />,    lk: "account"  },
+    { id: "dashboard", icon: "home",    lk: "overview" },
+    { id: "upload",    icon: "scan",    lk: "scan",     action: () => scanRef.current?.click() },
+    { id: "calendar",  icon: "sparkle", lk: "advisor"  },
+    { id: "account",   icon: "user",    lk: "account"  },
   ];
 
   return (
@@ -175,70 +168,28 @@ export default function SchuldOverzicht() {
       <div style={S.app} className="doei-app">
         <style>{globalCSS}</style>
 
-        {/* ── Desktop sidebar ── */}
-        <aside className="doei-sidebar">
-          <div className="doei-sidebar-logo">
-            <svg width="30" height="30" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-              <g transform="translate(60,60) scale(0.52)">
-                <ellipse cx="-22" cy="-22" rx="18" ry="28" transform="rotate(-45 -22 -22)" fill="#5CC8C8"/>
-                <ellipse cx="22" cy="-22" rx="18" ry="28" transform="rotate(45 22 -22)" fill="#F0C246"/>
-                <ellipse cx="-22" cy="22" rx="18" ry="28" transform="rotate(45 -22 22)" fill="#7B6CB2"/>
-                <ellipse cx="22" cy="22" rx="18" ry="28" transform="rotate(-45 22 22)" fill="#C49090"/>
-              </g>
-            </svg>
-            <span className="doei-sidebar-logo-text">doei</span>
-          </div>
-          <nav className="doei-sidebar-nav">
-            {tabs.map(tab => (
-              <button key={tab.id} className={`doei-sidebar-btn${screen === tab.id ? " active" : ""}`} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
-                <span className="doei-sidebar-icon">{tab.icon}</span>
-                {t(tab.lk)}
-              </button>
-            ))}
-          </nav>
-          <div className="doei-sidebar-bottom">
-            <div className="doei-sidebar-lang">
-              {LANGS.map(l => (
-                <button key={l.code} className={`doei-sidebar-lang-opt${lang === l.code ? " active" : ""}`} onClick={() => setLang(l.code)}>
-                  <l.Flag size={26} />
-                </button>
-              ))}
-            </div>
-            <button className="doei-sidebar-theme" onClick={toggleTheme}>
-              <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>
-              {theme === "light" ? <IconMoon /> : <IconSun />}
-            </button>
-          </div>
-        </aside>
-
-        {/* ── Mobile header ── */}
-        <header style={S.header} className="doei-header">
+        {/* ── Header ── */}
+        <header style={S.header}>
           <div style={S.headerInner}>
-            <div style={S.logo}>
-              <svg width="30" height="30" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-                <g transform="translate(60,60) scale(0.52)">
-                  <ellipse cx="-22" cy="-22" rx="18" ry="28" transform="rotate(-45 -22 -22)" fill="#5CC8C8"/>
-                  <ellipse cx="22" cy="-22" rx="18" ry="28" transform="rotate(45 22 -22)" fill="#F0C246"/>
-                  <ellipse cx="-22" cy="22" rx="18" ry="28" transform="rotate(45 -22 22)" fill="#7B6CB2"/>
-                  <ellipse cx="22" cy="22" rx="18" ry="28" transform="rotate(-45 22 22)" fill="#C49090"/>
-                </g>
-              </svg>
-              <span style={S.logoText}>doei</span>
-            </div>
+            <DoeiLogo size={22} />
             <div style={S.headerRight}>
-              <button style={S.themeBtn} onClick={toggleTheme}>
-                {theme === "light" ? <IconMoon /> : <IconSun />}
+              <button style={S.iconBtn} onClick={toggleTheme} aria-label="Toggle theme">
+                <Icon name={theme === "light" ? "moon" : "sun"} size={16} />
+              </button>
+              <button style={S.iconBtn} onClick={() => setScreen("alerts")} aria-label="Notifications">
+                <Icon name="bell" size={16} />
+                {notifications.length > 0 && <span style={S.notifDot} />}
               </button>
               <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
                 <button style={S.langDropBtn} onClick={() => setShowLangMenu(v => !v)}>
-                  <currentLang.Flag size={22} />
-                  <IconChevron />
+                  <currentLang.Flag size={20} />
+                  <Icon name="chev" size={11} />
                 </button>
                 {showLangMenu && (
                   <div style={S.langDropMenu}>
                     {LANGS.map((l, i) => (
                       <button key={l.code} style={{ ...S.langDropItem, ...(lang === l.code ? S.langDropItemActive : {}), ...(i === LANGS.length - 1 ? { borderBottom: "none" } : {}) }} onClick={() => { setLang(l.code); setShowLangMenu(false); }}>
-                        <l.Flag size={28} />
+                        <l.Flag size={26} />
                         <span>{l.label}</span>
                       </button>
                     ))}
@@ -250,7 +201,7 @@ export default function SchuldOverzicht() {
         </header>
 
         {/* ── Main content ── */}
-        <main style={S.main} className="doei-main">
+        <main style={S.main}>
           {screen === "dashboard" && <Dashboard debts={debts} totalDebt={totalDebt} escalationCost={escalationCost} monthlyIncome={monthlyIncome} notifications={notifications} onViewDebt={(d) => { setSelectedDebt(d); setScreen("detail"); }} onNavigate={setScreen} />}
           {screen === "detail" && selectedDebt && <DebtDetail debt={selectedDebt} income={income} onBack={() => setScreen("dashboard")} onDelete={deleteDebt} />}
           {screen === "calendar" && <Advisor debts={debts} income={income} />}
@@ -260,12 +211,18 @@ export default function SchuldOverzicht() {
 
         <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />
         {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => { setShowAddDebt(false); setScanInitData(null); }} initialData={scanInitData} />}
-<nav style={S.nav} className="doei-nav">
-          {tabs.map(tab => (
-            <button key={tab.id} style={{ ...S.navBtn, ...(screen === tab.id ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
-              {tab.icon}<span style={S.navLabel}>{t(tab.lk)}</span>
-            </button>
-          ))}
+
+        {/* ── Floating pill nav ── */}
+        <nav style={S.nav}>
+          {tabs.map(tab => {
+            const active = screen === tab.id;
+            return (
+              <button key={tab.id} style={{ ...S.navBtn, ...(active ? S.navBtnActive : {}) }} onClick={() => tab.action ? tab.action() : setScreen(tab.id)}>
+                <Icon name={tab.icon} size={17} />
+                {active && <span>{t(tab.lk)}</span>}
+              </button>
+            );
+          })}
         </nav>
       </div>
     </LangContext.Provider>
