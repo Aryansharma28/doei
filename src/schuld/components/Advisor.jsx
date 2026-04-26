@@ -41,7 +41,7 @@ function PayActionCard({ creditorId, amount, label, lang }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{label}</div>
         <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 1 }}>
-          {displayAmt} — {lang === "nl" ? "betaal via uw bank" : "pay via your bank"}
+          {displayAmt} via {lang === "nl" ? "je bank" : "your bank"}
         </div>
       </div>
     </div>
@@ -155,7 +155,7 @@ Contact the CJIB today to avoid your fine escalating further.
       });
       if (!response.ok) throw new Error("API error");
       const data = await response.json();
-      const reply = data.reply || (lang === "nl" ? "Sorry, probeer het opnieuw." : "Sorry, couldn't process that. Please try again.");
+      const reply = data.reply || (lang === "nl" ? "Er ging iets mis. Probeer het opnieuw." : "Something went wrong. Please try again.");
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
       await span.end({ model: "claude-sonnet-4-6", systemPrompt, messages: apiMessages, output: reply, usage: {} });
     } catch (err) {
@@ -183,8 +183,8 @@ Contact the CJIB today to avoid your fine escalating further.
           <div style={S.chipsWrap}>
             <div style={S.welcomeMsg}>
               {lang === "nl"
-                ? "Hallo! Ik ken uw volledige schuldsituatie. Stel me een vraag of kies een onderwerp."
-                : "Hello! I know your full debt situation. Ask me anything or pick a topic below."}
+                ? "Hallo. Ik ken jouw volledige schuldsituatie. Stel gerust een vraag, of kies een onderwerp hieronder."
+                : "Hi there. I have a full picture of your debts. Ask me anything, or pick a topic below."}
             </div>
             <div style={S.chipsRow}>
               {chips.map((chip, i) => (

@@ -39,29 +39,43 @@ function SuggestedDebtCard({ s, onAccept, onDismiss }) {
           onClick={() => onAccept(s)}
           style={{ flex: 1, height: 38, background: "var(--accent)", color: "white", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
         >
-          Add debt
+          Add to my debts
         </button>
         <button
           onClick={() => onDismiss(s)}
           style={{ flex: 1, height: 38, background: "var(--paper-2)", color: "var(--ink-1)", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer" }}
         >
-          Dismiss
+          Not mine
         </button>
       </div>
     </div>
   );
 }
 
-export function Account({ profile, onSaveProfile, connections, onConnect, onDisconnect, session, suggestedDebts = [], onAcceptSuggested, onDismissSuggested, onSuggest }) {
+export function Account({
+  profile,
+  onSaveProfile,
+  connections,
+  onConnect,
+  onDisconnect,
+  onConnectGmail,
+  onSyncGmail,
+  onDisconnectGmail,
+  gmailBusy = false,
+  gmailMessage = "",
+  gmailError = "",
+  session,
+  suggestedDebts = [],
+  onAcceptSuggested,
+  onDismissSuggested,
+  onSuggest,
+}) {
   const { t } = useLang();
   const [form, setForm] = useState(profile);
   const [edited, setEdited] = useState(false);
   const [showBankPicker, setShowBankPicker] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
-  const [gmailSyncing, setGmailSyncing] = useState(false);
-  const [gmailError, setGmailError] = useState("");
-  const [gmailStatus, setGmailStatus] = useState("");
 
   const change = (field, val) => { setForm(p => ({ ...p, [field]: val })); setEdited(true); };
 
@@ -90,47 +104,6 @@ export function Account({ profile, onSaveProfile, connections, onConnect, onDisc
   };
 
   const handleSignOut = () => supabase.auth.signOut();
-  const handleGmailSync = async () => {
-    setGmailSyncing(true);
-    setGmailError("");
-    setGmailStatus("");
-
-    try {
-      const res = await fetch("/api/gmail/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: session?.user?.id }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Failed to sync Gmail");
-
-      onConnect("gmail", { name: "Gmail", info: session?.user?.email || "Connected" });
-      if (data.suggested?.length) {
-        onSuggest(prev => {
-          const current = prev || [];
-          const seen = new Set(current.map(item => item.email_id || `${item.creditor_name}-${item.transaction_date}-${item.amount}`));
-          const next = [...current];
-          data.suggested.forEach(item => {
-            const key = item.email_id || `${item.creditor_name}-${item.transaction_date}-${item.amount}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              next.unshift(item);
-            }
-          });
-          return next;
-        });
-      }
-      setGmailStatus(
-        data.suggested?.length
-          ? `Found ${data.suggested.length} debt-related ${data.suggested.length === 1 ? "email" : "emails"}`
-          : "No debt-related emails found in the latest sync"
-      );
-    } catch (err) {
-      setGmailError(err.message);
-    } finally {
-      setGmailSyncing(false);
-    }
-  };
 
   const bankConnected = !!connections.bank;
   const gmailConnected = !!connections.gmail;
@@ -141,7 +114,7 @@ export function Account({ profile, onSaveProfile, connections, onConnect, onDisc
       {suggestedDebts.length > 0 && (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-0)", marginBottom: 10 }}>
-            Detected from your bank — {suggestedDebts.length} possible {suggestedDebts.length === 1 ? "debt" : "debts"}
+            Found in your bank history: {suggestedDebts.length} possible {suggestedDebts.length === 1 ? "debt" : "debts"}
           </div>
           {suggestedDebts.map((s, i) => (
             <SuggestedDebtCard key={i} s={s} onAccept={onAcceptSuggested} onDismiss={onDismissSuggested} />
@@ -151,7 +124,7 @@ export function Account({ profile, onSaveProfile, connections, onConnect, onDisc
 
       {/* Profile */}
       <div style={S.card}>
-        <div style={S.cardTitle}>Profile</div>
+        <div style={S.cardTitle}>{t("profile")}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
           <div style={{ width: 52, height: 52, borderRadius: 26, background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 600, flexShrink: 0 }}>
             {(form.name || session?.user?.email || "?")[0].toUpperCase()}
@@ -212,10 +185,10 @@ export function Account({ profile, onSaveProfile, connections, onConnect, onDisc
       <div style={S.card}>
         <div style={S.cardTitle}>Gmail</div>
         <p style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 14, lineHeight: 1.5 }}>
-          Search your recent Gmail inbox via the server-side MCP and flag debt-related emails as suggested debts.
+          Link your own Gmail account, then let the morning sync flag debt-related emails as suggested debts.
         </p>
         {gmailError && <p style={{ fontSize: 13, color: "var(--action-fg)", marginBottom: 10 }}>{gmailError}</p>}
-        {gmailStatus && <p style={{ fontSize: 13, color: "var(--stable-fg)", marginBottom: 10 }}>{gmailStatus}</p>}
+        {gmailMessage && <p style={{ fontSize: 13, color: "var(--stable-fg)", marginBottom: 10 }}>{gmailMessage}</p>}
         {gmailConnected && (
           <div style={{ fontSize: 12, color: "var(--stable-fg)", marginBottom: 10 }}>
             Connected as {connections.gmail?.info}
@@ -223,15 +196,15 @@ export function Account({ profile, onSaveProfile, connections, onConnect, onDisc
         )}
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            onClick={handleGmailSync}
-            disabled={gmailSyncing}
-            style={{ flex: 1, height: 48, background: gmailSyncing ? "var(--paper-2)" : "var(--accent)", color: gmailSyncing ? "var(--ink-2)" : "white", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: gmailSyncing ? "default" : "pointer" }}
+            onClick={gmailConnected ? onSyncGmail : onConnectGmail}
+            disabled={gmailBusy}
+            style={{ flex: 1, height: 48, background: gmailBusy ? "var(--paper-2)" : "var(--accent)", color: gmailBusy ? "var(--ink-2)" : "white", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: gmailBusy ? "default" : "pointer" }}
           >
-            {gmailSyncing ? "Checking Gmail…" : gmailConnected ? "Sync Gmail now" : "Connect Gmail"}
+            {gmailBusy ? "Working…" : gmailConnected ? "Sync Gmail now" : "Connect Gmail"}
           </button>
           {gmailConnected && (
             <button
-              onClick={() => onDisconnect("gmail")}
+              onClick={onDisconnectGmail}
               style={{ background: "var(--paper-2)", border: "none", borderRadius: 12, padding: "0 14px", fontSize: 13, color: "var(--ink-1)", cursor: "pointer" }}
             >
               Disconnect
