@@ -359,21 +359,25 @@ export default function SchuldOverzicht() {
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = async (debt) => {
-    if (!session?.user?.id) return null;
+    if (!session?.user?.id) { console.warn("[addDebt] no session"); return null; }
     const id = `d${Date.now()}`;
     const row = debtToDB({ ...debt, id }, session.user.id);
+    console.log("[addDebt] inserting row:", row);
     const { data, error } = await supabase.from("debts").insert(row).select().single();
-    if (error) { console.error("[debts] insert failed:", error); return null; }
+    if (error) { console.error("[addDebt] debts insert FAILED:", error); return null; }
     const created = debtFromDB(data);
+    console.log("[addDebt] debt created:", created.id);
     setDebts(prev => [created, ...prev]);
     if (pendingScanDoc?.publicUrl) {
-      await supabase.from("documents").insert({
+      console.log("[addDebt] modal-path: attaching pendingScanDoc to debt", created.id);
+      const { error: docErr } = await supabase.from("documents").insert({
         user_id: session.user.id,
         debt_id: created.id,
         file_url: pendingScanDoc.publicUrl,
         file_name: pendingScanDoc.name,
         file_type: pendingScanDoc.type,
       });
+      if (docErr) console.error("[addDebt] modal-path documents insert FAILED:", docErr);
     }
     setShowAddDebt(false);
     setScanInitData(null);
@@ -505,28 +509,53 @@ export default function SchuldOverzicht() {
 
   const handleScan = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { console.warn("[scan] no file"); return; }
     e.target.value = "";
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) { console.warn("[scan] no session"); return; }
+    console.log("[scan] start:", { name: file.name, size: file.size, type: file.type, userId: session.user.id });
 
+    // 1) Storage upload
     let publicUrl = null;
+    let storagePath = null;
     try {
-      const path = `${session.user.id}/scans/${Date.now()}_${file.name}`;
-      const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
-      if (!upErr) publicUrl = supabase.storage.from("documents").getPublicUrl(path).data.publicUrl;
-    } catch {}
+      storagePath = `${session.user.id}/scans/${Date.now()}_${file.name}`;
+      console.log("[scan] uploading to bucket=documents path=", storagePath);
+      const { data: upData, error: upErr } = await supabase.storage.from("documents").upload(storagePath, file);
+      if (upErr) {
+        console.error("[scan] storage upload FAILED:", upErr);
+      } else {
+        const { data: urlData } = supabase.storage.from("documents").getPublicUrl(storagePath);
+        publicUrl = urlData.publicUrl;
+        console.log("[scan] storage upload OK:", { upData, publicUrl });
+      }
+    } catch (err) {
+      console.error("[scan] storage upload threw:", err);
+    }
 
     const scanDoc = publicUrl ? { publicUrl, name: file.name, type: file.type || "image/jpeg" } : null;
     setPendingScanDoc(scanDoc);
 
+    // 2) Edge function: analyze-document
     let parsed = null;
     try {
-      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = () => rej(new Error("fail")); r.readAsDataURL(file); });
+      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = () => rej(new Error("FileReader failed")); r.readAsDataURL(file); });
+      console.log("[scan] invoking analyze-document, b64 length:", b64.length);
       const { data, error } = await supabase.functions.invoke("analyze-document", { body: { data: b64, mimeType: file.type || "image/jpeg" } });
-      if (!error && data) parsed = data;
-    } catch {}
+      if (error) {
+        console.error("[scan] analyze-document edge function error:", error);
+      } else {
+        console.log("[scan] analyze-document returned:", data);
+        parsed = data;
+      }
+    } catch (err) {
+      console.error("[scan] analyze-document threw:", err);
+    }
 
-    if (parsed?.creditorName && parsed?.amount) {
+    // 3) Branch: auto-create or modal fallback
+    const canAutoCreate = parsed?.creditorName && parsed?.amount;
+    console.log("[scan] canAutoCreate:", canAutoCreate, { creditorName: parsed?.creditorName, amount: parsed?.amount });
+
+    if (canAutoCreate) {
       const created = await addDebt({
         creditorType: parsed.creditorType || "other",
         creditorName: parsed.creditorName,
@@ -536,24 +565,36 @@ export default function SchuldOverzicht() {
         stage: parsed.stage || "warning",
         notes: parsed.notes || "",
       });
+      console.log("[scan] addDebt returned:", created);
+
       if (created) {
         if (scanDoc) {
-          const { error: docErr } = await supabase.from("documents").insert({
+          console.log("[scan] inserting documents row for debt", created.id);
+          const { data: docRow, error: docErr } = await supabase.from("documents").insert({
             user_id: session.user.id,
             debt_id: created.id,
             file_url: scanDoc.publicUrl,
             file_name: scanDoc.name,
             file_type: scanDoc.type,
-          });
-          if (docErr) console.error("[scan] document insert failed:", docErr);
+          }).select().single();
+          if (docErr) {
+            console.error("[scan] documents insert FAILED:", docErr);
+          } else {
+            console.log("[scan] documents row inserted:", docRow);
+          }
+        } else {
+          console.warn("[scan] no scanDoc to attach (storage upload had failed)");
         }
         setPendingScanDoc(null);
         setSelectedDebt(created);
         setScreen("detail");
         return;
+      } else {
+        console.warn("[scan] addDebt returned null — falling back to modal");
       }
     }
 
+    console.log("[scan] opening AddDebtModal as fallback");
     if (parsed) setScanInitData(parsed);
     setShowAddDebt(true);
   };
