@@ -117,6 +117,7 @@ export default function SchuldOverzicht() {
   const [selectedDebt, setSelectedDebt] = useState(null);
   const [showAddDebt, setShowAddDebt] = useState(false);
   const [scanInitData, setScanInitData] = useState(null);
+  const [pendingScanDoc, setPendingScanDoc] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("doei-theme") || "light");
@@ -357,14 +358,26 @@ export default function SchuldOverzicht() {
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
   const addDebt = async (debt) => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) return null;
     const id = `d${Date.now()}`;
     const row = debtToDB({ ...debt, id }, session.user.id);
     const { data, error } = await supabase.from("debts").insert(row).select().single();
-    if (error) { console.error("[debts] insert failed:", error); return; }
-    setDebts(prev => [debtFromDB(data), ...prev]);
+    if (error) { console.error("[debts] insert failed:", error); return null; }
+    const created = debtFromDB(data);
+    setDebts(prev => [created, ...prev]);
+    if (pendingScanDoc?.publicUrl) {
+      await supabase.from("documents").insert({
+        user_id: session.user.id,
+        debt_id: created.id,
+        file_url: pendingScanDoc.publicUrl,
+        file_name: pendingScanDoc.name,
+        file_type: pendingScanDoc.type,
+      });
+    }
     setShowAddDebt(false);
     setScanInitData(null);
+    setPendingScanDoc(null);
+    return created;
   };
   const deleteDebt = async (id) => {
     if (!session?.user?.id) return;
@@ -380,8 +393,23 @@ export default function SchuldOverzicht() {
   const connectIntegration = (id, data) => setConnections(prev => ({ ...prev, [id]: data }));
   const disconnectIntegration = (id) => setConnections(prev => { const n = { ...prev }; delete n[id]; return n; });
   const acceptSuggested = async (s) => {
-    await addDebt({ creditorName: s.creditor_name, creditorType: s.creditor_type, amount: s.amount, originalAmount: s.amount, dueDate: s.transaction_date, stage: "warning", notes: s.description });
+    const created = await addDebt({ creditorName: s.creditor_name, creditorType: s.creditor_type, amount: s.amount, originalAmount: s.amount, dueDate: s.transaction_date, stage: "warning", notes: s.description });
+    if (created && session?.user?.id && s.email_id) {
+      const fileName = (s.subject || s.description || "Gmail email").slice(0, 200);
+      const fileUrl = `https://mail.google.com/mail/u/0/#all/${s.email_id}`;
+      await supabase.from("documents").insert({
+        user_id: session.user.id,
+        debt_id: created.id,
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: "email/gmail",
+      });
+    }
     setSuggestedDebts(prev => prev.filter(x => x !== s));
+    if (created) {
+      setSelectedDebt(created);
+      setScreen("detail");
+    }
   };
   const dismissSuggested = (s) => setSuggestedDebts(prev => prev.filter(x => x !== s));
   const connectGmail = async () => {
@@ -476,11 +504,43 @@ export default function SchuldOverzicht() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (!session?.user?.id) return;
+
+    let publicUrl = null;
+    try {
+      const path = `${session.user.id}/scans/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+      if (!upErr) publicUrl = supabase.storage.from("documents").getPublicUrl(path).data.publicUrl;
+    } catch {}
+
+    const scanDoc = publicUrl ? { publicUrl, name: file.name, type: file.type || "image/jpeg" } : null;
+    setPendingScanDoc(scanDoc);
+
+    let parsed = null;
     try {
       const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = () => rej(new Error("fail")); r.readAsDataURL(file); });
       const { data, error } = await supabase.functions.invoke("analyze-document", { body: { data: b64, mimeType: file.type || "image/jpeg" } });
-      if (!error && data) setScanInitData(data);
+      if (!error && data) parsed = data;
     } catch {}
+
+    if (parsed?.creditorName && parsed?.amount) {
+      const created = await addDebt({
+        creditorType: parsed.creditorType || "other",
+        creditorName: parsed.creditorName,
+        amount: parseFloat(parsed.amount),
+        originalAmount: parseFloat(parsed.originalAmount || parsed.amount),
+        dueDate: parsed.dueDate || new Date().toISOString().split("T")[0],
+        stage: parsed.stage || "warning",
+        notes: parsed.notes || "",
+      });
+      if (created) {
+        setSelectedDebt(created);
+        setScreen("detail");
+        return;
+      }
+    }
+
+    if (parsed) setScanInitData(parsed);
     setShowAddDebt(true);
   };
 
@@ -561,7 +621,7 @@ export default function SchuldOverzicht() {
         </main>
 
         <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleScan} />
-        {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => { setShowAddDebt(false); setScanInitData(null); }} initialData={scanInitData} />}
+        {showAddDebt && <AddDebtModal onAdd={addDebt} onClose={() => { setShowAddDebt(false); setScanInitData(null); setPendingScanDoc(null); }} initialData={scanInitData} />}
 
         {/* ── Floating pill nav ── */}
         <nav style={S.nav}>

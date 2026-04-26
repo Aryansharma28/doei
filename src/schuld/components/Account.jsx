@@ -32,6 +32,27 @@ function SourceIcon({ children }) {
   );
 }
 
+function ComingSoonRow({ icon, name, subtitle, href, last = false }) {
+  const content = (
+    <>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: "var(--paper-1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, opacity: 0.55 }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-2)" }}>{name}</div>
+        <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2, opacity: 0.8 }}>{subtitle}</div>
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-2)", padding: "5px 10px", borderRadius: 999, background: "var(--paper-2)", flexShrink: 0, letterSpacing: 0.2 }}>
+        To be announced
+      </span>
+    </>
+  );
+  const rowStyle = { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: last ? "none" : "1px solid var(--paper-2)", textDecoration: "none", color: "inherit" };
+  return href
+    ? <a href={href} target="_blank" rel="noopener noreferrer" style={rowStyle}>{content}</a>
+    : <div style={rowStyle}>{content}</div>;
+}
+
 function SuggestedDebtCard({ s, onAccept, onDismiss }) {
   return (
     <div style={{ background: "var(--paper-2)", borderRadius: 14, padding: "13px 14px", marginBottom: 8 }}>
@@ -226,6 +247,33 @@ export function Account({
             {gmailError || connectError || gmailMessage}
           </div>
         )}
+
+        {/* ── Public debt data providers (mock / coming soon) ── */}
+        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--paper-2)" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 10 }}>
+            Public debt sources
+          </div>
+
+          <ComingSoonRow
+            icon="🏛️"
+            name="Mijn Betaaloverzicht"
+            subtitle="Vorderingenoverzicht Rijk"
+            href="https://www.eenoverheidsincasso.nl/onze-dienstverlening/vorderingenoverzicht-rijk"
+          />
+          <ComingSoonRow
+            icon="📋"
+            name="SchuldenWijzer"
+            subtitle="Overview of registered debts"
+            href="https://schuldenwijzer.nl/"
+          />
+          <ComingSoonRow
+            icon="🔐"
+            name="DigiD"
+            subtitle="Government login"
+            href="https://digid.nl/"
+            last
+          />
+        </div>
       </div>
 
       {/* ── Sign out ── */}
