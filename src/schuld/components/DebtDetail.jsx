@@ -35,7 +35,7 @@ function LoadingDots() {
   );
 }
 
-export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, bankName, onMarkPaid, onNavigate }) {
+export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, bankName, onMarkPaid, onAskAdvisor }) {
   const { t, lang, fmtDate } = useLang();
   const c = getCreditor(debt.creditorType);
   const s = getStageData(debt.stage);
@@ -254,7 +254,12 @@ Never call a sommatie or overdue debt "manageable" or "no problem". Be honest an
                 </p>
               )}
               <button
-                onClick={() => onNavigate?.("calendar")}
+                onClick={() => {
+                  const prompt = lang === "nl"
+                    ? `Wat moet ik doen met mijn schuld aan ${debt.creditorName} van ${fmt(debt.amount)}?`
+                    : `What should I do about my debt to ${debt.creditorName} of ${fmt(debt.amount)}?`;
+                  onAskAdvisor?.(prompt);
+                }}
                 style={{
                   marginTop: 14,
                   width: "100%",

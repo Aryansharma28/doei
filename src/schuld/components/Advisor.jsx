@@ -117,7 +117,7 @@ const actionCardStyle = {
   width: "100%", boxSizing: "border-box", cursor: "pointer",
 };
 
-export function Advisor({ debts, income }) {
+export function Advisor({ debts, income, initialPrompt, onConsumeInitialPrompt }) {
   const { t, lang } = useLang();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -126,6 +126,14 @@ export function Advisor({ debts, income }) {
   const inputRef = useRef(null);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setInput(initialPrompt);
+      inputRef.current?.focus();
+      onConsumeInitialPrompt?.();
+    }
+  }, [initialPrompt, onConsumeInitialPrompt]);
 
   const buildSystemPrompt = () => {
     const totalDebt = debts.reduce((s, d) => s + d.amount, 0);
