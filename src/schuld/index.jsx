@@ -10,11 +10,35 @@ import { AddDebtModal } from "./components/AddDebtModal";
 import { S } from "./styles/styles";
 import { globalCSS, storage, fmt } from "./utils/helpers";
 import { translations } from "./utils/i18n";
-import { DEMO_DEBTS, DEMO_INCOME } from "./constants/demoData";
+import { DEMO_INCOME } from "./constants/demoData";
 import { getCreditor, getStageData } from "./constants/creditors";
 import { supabase } from "../lib/supabase";
 
 const PENDING_GMAIL_OAUTH_KEY = "doei-pending-gmail-oauth";
+
+const debtFromDB = (r) => ({
+  id: r.id,
+  creditorType: r.creditor_type,
+  creditorName: r.creditor_name,
+  amount: Number(r.amount),
+  originalAmount: Number(r.original_amount),
+  dueDate: r.due_date,
+  stage: r.stage,
+  notes: r.notes || "",
+  createdAt: typeof r.created_at === "string" ? r.created_at.slice(0, 10) : r.created_at,
+});
+
+const debtToDB = (debt, userId) => ({
+  id: debt.id,
+  user_id: userId,
+  creditor_type: debt.creditorType,
+  creditor_name: debt.creditorName,
+  amount: debt.amount,
+  original_amount: debt.originalAmount,
+  due_date: debt.dueDate,
+  stage: debt.stage,
+  notes: debt.notes || null,
+});
 
 function mergeSuggestedDebts(existing, incoming) {
   const current = existing || [];
@@ -88,7 +112,7 @@ export default function SchuldOverzicht() {
   const [session, setSession] = useState(undefined); // undefined = loading, null = logged out
   const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("dashboard");
-  const [debts, setDebts] = useState(DEMO_DEBTS);
+  const [debts, setDebts] = useState([]);
   const [income, setIncome] = useState(DEMO_INCOME);
   const [selectedDebt, setSelectedDebt] = useState(null);
   const [showAddDebt, setShowAddDebt] = useState(false);
@@ -108,8 +132,16 @@ export default function SchuldOverzicht() {
   // Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+
+      // Verbose for debugging the Gmail/Calendar connect flow.
+      console.log("[auth] event:", event, {
+        hasSession: !!session,
+        provider: session?.user?.app_metadata?.provider,
+        hasRefreshToken: !!session?.provider_refresh_token,
+        hasProviderToken: !!session?.provider_token,
+      });
 
       if (session?.provider_refresh_token) {
         sessionStorage.setItem(
@@ -119,6 +151,18 @@ export default function SchuldOverzicht() {
             providerRefreshToken: session.provider_refresh_token,
             providerToken: session.provider_token || null,
           })
+        );
+        console.log("[auth] saved provider_refresh_token to sessionStorage");
+      } else if (event === "SIGNED_IN" && session?.user?.app_metadata?.provider === "google") {
+        // Came back from Google OAuth but no refresh_token issued.
+        // Google only issues one when (a) access_type=offline AND prompt=consent
+        // AND (b) the user is granting at least one new scope. If they've
+        // already granted everything, Google returns an access_token only.
+        // Fix: revoke the app at https://myaccount.google.com/permissions
+        // and reconnect.
+        console.warn("[auth] Google sign-in completed BUT no provider_refresh_token. Revoke access at https://myaccount.google.com/permissions then reconnect.");
+        setGmailError(
+          "Google didn't issue a refresh token. Open https://myaccount.google.com/permissions, remove access for this app, then click Connect Gmail again."
         );
       }
     });
@@ -246,11 +290,11 @@ export default function SchuldOverzicht() {
   const t = useCallback((key) => translations[lang]?.[key] || translations.en[key] || key, [lang]);
   const fmtDate = useCallback((d) => new Date(d).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "short" }), [lang]);
 
+  // Load preferences from localStorage (debts come from Supabase, see effect below)
   useEffect(() => {
     (async () => {
       const saved = await storage.get("app-data-v4");
       if (saved) {
-        if (saved.debts) setDebts(saved.debts);
         if (saved.income) setIncome(saved.income);
         if (saved.lang) setLang(saved.lang);
         if (saved.profile) setProfile(saved.profile);
@@ -260,7 +304,33 @@ export default function SchuldOverzicht() {
     })();
   }, []);
 
-  useEffect(() => { if (loaded) storage.set("app-data-v4", { debts, income, lang, profile, connections }); }, [debts, income, lang, profile, connections, loaded]);
+  // Persist preferences (NOT debts — those live in Supabase)
+  useEffect(() => {
+    if (loaded) storage.set("app-data-v4", { income, lang, profile, connections });
+  }, [income, lang, profile, connections, loaded]);
+
+  // Load debts from Supabase whenever the session is established
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setDebts([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("debts")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) {
+        console.error("[debts] load failed:", error);
+        return;
+      }
+      setDebts((data || []).map(debtFromDB));
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     const today = new Date();
@@ -286,12 +356,33 @@ export default function SchuldOverzicht() {
   const totalOriginal = debts.reduce((s, d) => s + d.originalAmount, 0);
   const escalationCost = totalDebt - totalOriginal;
   const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
-  const addDebt = (debt) => { setDebts(prev => [...prev, { ...debt, id: `d${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10) }]); setShowAddDebt(false); setScanInitData(null); };
-  const deleteDebt = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); };
-  const markDebtPaid = (id) => { setDebts(prev => prev.filter(d => d.id !== id)); setSelectedDebt(null); setScreen("dashboard"); };
+  const addDebt = async (debt) => {
+    if (!session?.user?.id) return;
+    const id = `d${Date.now()}`;
+    const row = debtToDB({ ...debt, id }, session.user.id);
+    const { data, error } = await supabase.from("debts").insert(row).select().single();
+    if (error) { console.error("[debts] insert failed:", error); return; }
+    setDebts(prev => [debtFromDB(data), ...prev]);
+    setShowAddDebt(false);
+    setScanInitData(null);
+  };
+  const deleteDebt = async (id) => {
+    if (!session?.user?.id) return;
+    const { error } = await supabase.from("debts").delete().eq("id", id).eq("user_id", session.user.id);
+    if (error) { console.error("[debts] delete failed:", error); return; }
+    setDebts(prev => prev.filter(d => d.id !== id));
+    setSelectedDebt(null);
+  };
+  const markDebtPaid = async (id) => {
+    await deleteDebt(id);
+    setScreen("dashboard");
+  };
   const connectIntegration = (id, data) => setConnections(prev => ({ ...prev, [id]: data }));
   const disconnectIntegration = (id) => setConnections(prev => { const n = { ...prev }; delete n[id]; return n; });
-  const acceptSuggested = (s) => { addDebt({ creditorName: s.creditor_name, creditorType: s.creditor_type, amount: s.amount, originalAmount: s.amount, dueDate: s.transaction_date, stage: "warning", notes: s.description }); setSuggestedDebts(prev => prev.filter(x => x !== s)); };
+  const acceptSuggested = async (s) => {
+    await addDebt({ creditorName: s.creditor_name, creditorType: s.creditor_type, amount: s.amount, originalAmount: s.amount, dueDate: s.transaction_date, stage: "warning", notes: s.description });
+    setSuggestedDebts(prev => prev.filter(x => x !== s));
+  };
   const dismissSuggested = (s) => setSuggestedDebts(prev => prev.filter(x => x !== s));
   const connectGmail = async () => {
     setGmailBusy(true);

@@ -103,11 +103,13 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
     if (!file) return;
     setUploading(true);
     setUploadError(null);
-    const path = `${debt.id}/${Date.now()}_${file.name}`;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUploadError("Not signed in"); setUploading(false); return; }
+    const path = `${user.id}/${debt.id}/${Date.now()}_${file.name}`;
     const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
     if (upErr) { setUploadError(upErr.message); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
-    await supabase.from("documents").insert({ debt_id: debt.id, file_url: publicUrl, file_name: file.name, file_type: file.type });
+    await supabase.from("documents").insert({ user_id: user.id, debt_id: debt.id, file_url: publicUrl, file_name: file.name, file_type: file.type });
     await loadDocs();
     setUploading(false);
     e.target.value = "";
