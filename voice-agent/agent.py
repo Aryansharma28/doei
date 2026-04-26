@@ -29,7 +29,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from livekit import agents
 from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli, function_tool
-from livekit.plugins import anthropic, cartesia, deepgram, silero
+from livekit.agents.stt import StreamAdapter
+from livekit.plugins import anthropic, cartesia, reson8, silero
 
 from prompts import OPENING_FALLBACK, build_voice_system_prompt
 from tools import (
@@ -135,11 +136,12 @@ async def entrypoint(ctx: JobContext) -> None:
         first_name=first_name,
     )
 
+    vad = silero.VAD.load()
     session = AgentSession(
-        stt=deepgram.STT(model="nova-2", language="nl" if lang == "nl" else "en"),
+        stt=StreamAdapter(stt=reson8.STT(language="nl" if lang == "nl" else "en"), vad=vad),
         llm=anthropic.LLM(model="claude-haiku-4-5"),
         tts=cartesia.TTS(model="sonic-2", language="nl" if lang == "nl" else "en"),
-        vad=silero.VAD.load(),
+        vad=vad,
     )
 
     advisor = FinancialAdvisor(
