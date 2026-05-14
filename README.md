@@ -11,7 +11,7 @@
 
 This repository is the **hackathon prototype** that the production `doei` is being built from. I'm actively building the real product — it is **not currently open source**, and this repo is a starting point / reference, not the live codebase. Things will move fast, break, and diverge.
 
-👉 **Want to be notified when it ships?** [Join the waitlist](https://example.com/waitlist) (placeholder — real link coming soon).
+👉 **Want to be notified when it ships?** [Join the waitlist](https://aryansharma28.github.io/doei-waitlist/).
 
 ---
 
