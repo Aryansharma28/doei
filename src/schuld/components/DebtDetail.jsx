@@ -62,19 +62,9 @@ export function DebtDetail({ debt, income = [], onBack, onDelete, bankBalance, b
     setActionContent(null);
     const language = lang === "nl" ? "Dutch" : "English";
     fetchAIText(
-      `You advise people in the Netherlands dealing with debt. Respond in ${language}.
+      `You advise people in the Netherlands about debt. Respond in ${language}.
 
-Output 2-3 short action bullets (one per line, max 14 words each, in priority order). The FIRST line is the single most important next step — make it a concrete CTA: a phone number to call, a specific deadline, or a precise amount and date to pay. No bullet character — one action per line.
-
-Read the LETTER CONTENT (if provided) carefully and extract any deadlines or thresholds the letter itself names (e.g. "binnen 7 dagen", "+ € 7,50 herinneringskosten", phone numbers). Quote the letter's own deadlines when present — don't make them up.
-
-Use the URGENCY SIGNALS to set tone:
-- If sommatie / debt-collector / overdue / wage-garnishment risk → first action MUST be "Pay before X" or "Call them today" with the specific date or phone.
-- If extra costs will be added on a deadline (e.g. 7-day window), include "Pay before X to avoid +€Y in costs" as an action.
-- Always include a fallback when the user might not be able to pay in full: "Bel ze en vraag een betalingsregeling" (or the English equivalent). Public creditors and most utilities legally must consider one.
-- For huur arrears mention preventing ontruiming. For zorg achterstand mention avoiding CAK wanbetalersregeling. For BKR-risico (ING) mention the credit-rating impact.
-
-Do NOT output one generic sentence. Do NOT downplay urgency when signals indicate sommatie or overdue.`,
+Output 2-3 short action lines, one per line, in priority order. Keep each line concise. No bullet characters, no markdown.`,
       buildDebtContext(debt, c, s, collectionFees, monthlyIncome, docs),
       { oneSentence: false }
     ).then(text => {
@@ -92,20 +82,12 @@ Do NOT output one generic sentence. Do NOT downplay urgency when signals indicat
     setSummaryContent(null);
     const language = lang === "nl" ? "Dutch" : "English";
     fetchAIText(
-      `You advise people in the Netherlands dealing with debt. Respond in ${language}.
+      `You advise people in the Netherlands about debt. Respond in ${language}.
 
-Output exactly TWO short sentences, separated by a single newline. No headers, no bullets.
+Output exactly two short sentences separated by a single newline.
 
-Sentence 1 — WHAT THIS IS: name the kind of letter (e.g. "Sommatie van incassobureau", "Eindafrekening energie", "Eerste aanmaning verkeersboete"), what creditor sent it, and what it's for. Be concrete; do not say "this is a debt".
-Sentence 2 — WHY IT MATTERS NOW: state the urgency in plain language (e.g. "Last warning before court", "Standard bill, no rush yet", "Will trigger CAK wanbetalersregeling at 6 months unpaid"). Reference the actual deadline or escalation step from the letter or signals.
-
-Calibrate from URGENCY SIGNALS and LETTER CONTENT:
-- sommatie / debt-collector / overdue / wage-garnishment risk → "critical" or "last warning". Do not soften.
-- Fees already added or past first reminder → "urgent".
-- Public creditor (Belastingdienst, CJIB, DUO, CAK) → mention wage-garnishment power if relevant.
-- Quiet utility/standard bill, no signals → keep it calm but specific.
-
-Never call a sommatie or overdue debt "manageable" or "no problem". Be honest and specific.`,
+Sentence 1: what this letter/debt is.
+Sentence 2: why it matters now.`,
       buildDebtContext(debt, c, s, collectionFees, monthlyIncome, docs),
       { oneSentence: false }
     ).then(text => {
