@@ -1,5 +1,7 @@
 # doei
 
+👉 **[Join the waitlist](https://aryansharma28.github.io/doei-waitlist/)** — be the first to know when the real product ships.
+
 > **Dutch for "bye" — as in, bye debt.**
 > One integrated overview of household debt — for the household and their advisor.
 
