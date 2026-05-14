@@ -2,10 +2,17 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 import { basename } from "path";
 
-const supabase = createClient(
-  "https://YOUR_PROJECT_REF.supabase.co",
-  "REDACTED_SUPABASE_ANON_KEY"
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    "Missing Supabase env vars. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY)."
+  );
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const DEBT_ID = "d10";
 const FILES = [

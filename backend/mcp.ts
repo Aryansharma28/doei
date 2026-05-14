@@ -3,13 +3,16 @@ import { fileURLToPath } from "node:url";
 import { MCPClient } from "@mastra/mcp";
 
 const supabaseToken = process.env.SUPABASE_MCP_TOKEN;
+const supabaseProjectRef = process.env.SUPABASE_PROJECT_REF;
 
 export const mcp = new MCPClient({
   servers: {
-    ...(supabaseToken
+    ...(supabaseToken && supabaseProjectRef
       ? {
           supabase: {
-            url: new URL("https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF"),
+            url: new URL(
+              `https://mcp.supabase.com/mcp?project_ref=${supabaseProjectRef}`
+            ),
             requestInit: {
               headers: {
                 Authorization: `Bearer ${supabaseToken}`,

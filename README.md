@@ -7,6 +7,14 @@
 
 ---
 
+## 🚧 Heads up — this is not (yet) the open-source product
+
+This repository is the **hackathon prototype** that the production `doei` is being built from. I'm actively building the real product — it is **not currently open source**, and this repo is a starting point / reference, not the live codebase. Things will move fast, break, and diverge.
+
+👉 **Want to be notified when it ships?** [Join the waitlist](https://example.com/waitlist) (placeholder — real link coming soon).
+
+---
+
 ## The problem
 
 In the Netherlands, **700k+ households (8.8%)** have problematic debt — costing society **€8.5B a year** in lost productivity and support. The average household juggles **13 creditors**, each sending letters, emails, and calls through their own channel. People receive tens to hundreds of collection notices a year, scattered across mailboxes, drawers, and call logs — never assembled into one picture.
@@ -111,6 +119,36 @@ Inspired by everyone in NL who has ever opened a blue envelope and felt their st
 
 ## Run it
 
+### 1. Prerequisites
+
+- Node.js 18+ and npm
+- Python 3.10+ (only if you want the voice agent)
+- A free [Supabase](https://supabase.com) project
+- A [LiveKit](https://livekit.io) project (only for voice)
+- API keys for the AI providers you want to use (Anthropic, Deepgram, Cartesia)
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+# then fill in the values — see comments in .env.example for what each is for
+```
+
+Only the Supabase block is strictly required. Gmail, LiveKit, LangWatch, and
+the voice-agent providers are each independently optional and gracefully no-op
+when their env vars are missing.
+
+### 3. Provision the database
+
+Apply the SQL files in `supabase/` to your Supabase project (paste each into
+the SQL editor and run, or use the Supabase CLI). They create the `calls`,
+`scheduled_calls`, and `gmail_connections` tables with RLS policies. The
+`debts`, `documents`, `suggested_debts`, and `bank_connections` tables you'll
+need to create from the schema referenced below — RLS by `user_id` is
+mandatory.
+
+### 4. Run the app
+
 ```bash
 npm install
 npm run dev          # frontend on :5173
@@ -134,22 +172,20 @@ python3 scripts/generate_mock_debt_letters.py
 
 ## Env vars
 
-```env
-ANTHROPIC_API_KEY=
-LANGWATCH_API_KEY=
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_MCP_TOKEN=
-GMAIL_CLIENT_ID=
-GMAIL_CLIENT_SECRET=
-CRON_SECRET=
-LIVEKIT_URL=
-LIVEKIT_API_KEY=
-LIVEKIT_API_SECRET=
-DEEPGRAM_API_KEY=
-CARTESIA_API_KEY=
-APP_URL=http://localhost:5173
-```
+See [`.env.example`](.env.example) for the full, documented list. Quick summary:
+
+| Group | Vars | Required? |
+|---|---|---|
+| Supabase (browser) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | ✅ |
+| Supabase (server) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | ✅ |
+| Supabase MCP | `SUPABASE_MCP_TOKEN`, `SUPABASE_PROJECT_REF` | optional |
+| AI | `ANTHROPIC_API_KEY` | for voice agent |
+| Voice transport | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | for voice |
+| Voice STT/TTS | `DEEPGRAM_API_KEY`, `CARTESIA_API_KEY` | for voice |
+| Gmail | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | optional |
+| Cron | `CRON_SECRET` | for scheduled Gmail sync |
+| Observability | `VITE_LANGWATCH_API_KEY` | optional |
+| Misc | `APP_URL`, `PORT` | defaults are fine |
 
 ## API routes
 
@@ -178,3 +214,7 @@ APP_URL=http://localhost:5173
 | `scheduled_calls` | Booked follow-up calls + Google Calendar event IDs |
 
 RLS is on by default everywhere. Service role is only used in API routes; the browser client uses the anon key.
+
+## License
+
+[MIT](LICENSE). Contributions welcome — open an issue or PR.
